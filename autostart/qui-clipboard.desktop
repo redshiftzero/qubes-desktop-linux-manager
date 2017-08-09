@@ -1,0 +1,7 @@
+[Desktop Entry]
+Icon=edit-paste
+Name=Domains Tray
+Categories=System;Monitor;
+Exec=python3 -mqui.clipboard
+Terminal=false
+Type=Application
