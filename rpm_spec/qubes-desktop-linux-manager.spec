@@ -48,6 +48,7 @@ BuildRequires:  python3-devel
 
 Requires:  python3-setuptools
 Requires:  python3-dbus
+Requires:  python3-gbulb
 Requires:  qubes-dbus
 Requires:	 libappindicator-gtk3
 Requires:	 python3-systemd
@@ -105,6 +106,7 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 %{python3_sitelib}/qui/__init__.py
 %{python3_sitelib}/qui/decorators.py
 %{python3_sitelib}/qui/domains_table.py
+%{python3_sitelib}/qui/clipboard.py
 
 %dir %{python3_sitelib}/qui/models/
 %dir %{python3_sitelib}/qui/models/__pycache__
