@@ -79,14 +79,14 @@ class EventHandler(pyinotify.ProcessEvent):
         self.last_id = self.notifications_iface.Notify(
             '', self.last_id, '', 'Qubes Clipboard', body, [], [], 5)
 
-    def process_IN_MODIFY(self, _):
-        ''' Reacts to modifications of the DATA file '''
-        vm_from_file = open(FROM, 'r')
-        src_vmname = vm_from_file.readline().strip('\n')
-        if src_vmname == "":
+    def process_IN_CLOSE_WRITE(self, _):
+        ''' Reacts to modifications of the FROM file '''
+        with open(FROM, 'r') as vm_from_file:
+            vmname = vm_from_file.readline().strip('\n')
+        if vmname == "":
             self._paste()
         else:
-            self._copy(vmname=src_vmname)
+            self._copy(vmname=vmname)
 
     def process_IN_MOVE_SELF(self, _):
         ''' Stop loop if file is moved '''
@@ -134,7 +134,7 @@ def main():
         if not os.path.exists(DATA):
             time.sleep(0.5)
         else:
-            wm.add_watch(DATA, mask)
+            wm.add_watch(FROM, mask)
             handler = EventHandler(loop=loop)
             pyinotify.AsyncioNotifier(wm, loop, default_proc_fun=handler)
             loop.run_forever()
