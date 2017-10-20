@@ -70,6 +70,14 @@ class LabelsManager(ObjectManager):
 class Device(Properties):
     ''' Wrapper around `org.qubes.Device` Interface '''
 
+    def __init__(self, proxy: dbus.proxies.ProxyObject,
+                 data: dbus.Dictionary = None, domains = None, *args, **kwargs) -> None:
+        if domains is None:
+            self._domains = DomainManager()
+        else:
+            self._domains = domains
+        super().__init__(proxy, data, *args, **kwargs)
+
     def connect_to_signal(self, signal_name, handler_function):
         ''' Handy wrapper around self.proxy.connect_to_signal'''
         return self.proxy.connect_to_signal(
@@ -80,14 +88,14 @@ class Device(Properties):
     def frontend_domain(self):
         try:
             vm_obj_path = self['frontend_domain']
-            return DomainManager().children[vm_obj_path]
+            return self._domains.children[vm_obj_path]
         except KeyError:
             return None
 
     @property
     def backend_domain(self):
         vm_obj_path = self['backend_domain']
-        return DomainManager().children[vm_obj_path]
+        return self._domains.children[vm_obj_path]
 
     @property
     def name(self):
@@ -117,11 +125,12 @@ class DevicesManager(ObjectManager):
         super().__init__(proxy, cls=Device)
         self.connect_to_signal("Added", self._add)
         self.connect_to_signal("Removed", self._remove)
+        self.domains = DomainManager()
         self._setup_signals()
 
     def _add(self, obj_path: dbus.ObjectPath):
         proxy = self.bus.get_object('org.qubes.Devices1', obj_path)
-        self.children[obj_path] = Device(proxy)
+        self.children[obj_path] = Device(proxy, domains=self.domains)
 
     def _remove(self, obj_path: dbus.ObjectPath):
         proxy = self.bus.get_object('org.qubes.Devices1', obj_path)
@@ -166,7 +175,7 @@ class Domain(Properties):
 
 class DomainManager(Properties,ObjectManager):
     ''' Wraper around `org.qubes.DomainManager1` '''
-    _metaclass__ = _Singleton
+    __metaclass__ = _Singleton
 
     def __init__(self):
         self.bus = dbus.SessionBus()  # pylint: disable=no-member
@@ -174,7 +183,6 @@ class DomainManager(Properties,ObjectManager):
                                     '/org/qubes/DomainManager1',
                                     follow_name_owner_changes=True)
         super().__init__(proxy, cls=Domain)
-        self._setup_signals()
 
     def connect_to_signal(self, signal_name, handler_function):
         ''' Handy wrapper around self.proxy.connect_to_signal'''
@@ -187,5 +195,21 @@ class DomainManager(Properties,ObjectManager):
         return self.bus.remove_signal_receiver(signal_matcher)
 
     def _setup_signals(self):
-        pass
+        super(DomainManager, self)._setup_signals()
+        self.connect_to_signal('DomainAdded', self.AddObject)
+        self.connect_to_signal('DomainRemoved', self.RemoveObject)
 
+    def RemoveObject(self, what, path):
+        if path in self.children.keys():
+            del self.children[path]
+
+    def AddObject(self, what, path):
+        child_data = self.GetManagedObjects()
+        bus = dbus.SessionBus()
+        for child_path, _kwargs in child_data.items():
+            if child_path == path:
+                _data = list(_kwargs.values())[0]
+                child_proxy = bus.get_object(bus_name=self.proxy.bus_name,
+                                         object_path=child_path,
+                                         follow_name_owner_changes=True)
+                self.children[child_proxy.object_path] = Domain(child_proxy, _data)

@@ -38,7 +38,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         super().__init__(*args, **kwargs)
 
         self.dbus_vm = dbus_vm
-        self.vm = QUBES_APP.domains[self.dbus_vm['name']]
+        self.vm = QUBES_APP.domains[str(self.dbus_vm['name'])]
 
         self.dev = dev
         if self.dev.frontend_domain is None:
@@ -98,13 +98,16 @@ class DomainMenu(Gtk.Menu):
                 self.add_vm(None, vm_obj_path)
 
         DOMAINS.connect_to_signal('Started', self.add_vm)
-        DOMAINS.connect_to_signal('DomainAdded', self.add_vm)
-        DOMAINS.connect_to_signal('DomainRemoved', self.remove_vm)
+        DOMAINS.connect_to_signal('DomainAdded', self.refresh_vm_list)
+        DOMAINS.connect_to_signal('DomainRemoved', self.refresh_vm_list)
         DOMAINS.connect_to_signal('Halted', self.remove_vm)
         DOMAINS.connect_to_signal('Failed', self.remove_vm)
         DOMAINS.connect_to_signal('Unknown', self.remove_vm)
         self.dev.connect_to_signal('Attached', self.dev_attached)
         self.dev.connect_to_signal('Detached', self.dev_detached)
+
+    def refresh_vm_list(self, *args, **kwargs):
+        QUBES_APP.domains.refresh_cache(force=True)
 
     def add_vm(self, _, obj_path):
         vm = DOMAINS.children[obj_path]
