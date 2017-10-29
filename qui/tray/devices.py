@@ -120,7 +120,14 @@ class DomainMenu(Gtk.Menu):
             self.attached_item = menu_item
 
         self.menu_items[str(obj_path)] = menu_item
-        self.append(menu_item)
+        
+        # sort function
+        position = 0
+        for i in self.menu_items:
+            if str(self.menu_items[i].vm) < str(vm["name"]):
+                position += 1
+
+        self.insert(menu_item, position)
         self.show_all()
 
     def remove_vm(self, _, vm_obj_path):
@@ -215,7 +222,13 @@ class DeviceGroups():
             return
 
         position = self._position(dev['dev_class'])
-
+        
+        #sort function
+        name = dev.backend_domain['name'] + ':' + dev['ident']
+        for i in self.menu_items:
+            if str(dev['dev_class']) == str(i.dev['dev_class']):
+                if str(i.dev.backend_domain['name'] + ':' + i.dev['ident']) <= str(name):
+                    position += 1
         self._insert(dev_obj_path, position)
 
         if dev['dev_class'] not in [DEV_TYPES[0], DEV_TYPES[-1]]:
@@ -227,7 +240,7 @@ class DeviceGroups():
         if dev_type == DEV_TYPES[0]:
             return 0
         else:
-            return self.positions[dev_type] + 1
+            return self.positions[dev_type] - self.counters[dev_type] + 1
 
     def _insert(self, dev_obj_path: dbus.ObjectPath, position: int) -> None:
         dev = DEVICES[dev_obj_path]
