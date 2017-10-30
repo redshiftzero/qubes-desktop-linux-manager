@@ -259,7 +259,7 @@ class DomainTray(Gtk.Application):
             if i.vm['name'] > vm['name']:
                 break
             position += 1
-            
+
         self.tray_menu.insert(domain_item, position)
         self.menu_items[vm_path] = domain_item
         self.tray_menu.show_all()

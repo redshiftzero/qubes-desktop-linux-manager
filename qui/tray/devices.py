@@ -120,7 +120,7 @@ class DomainMenu(Gtk.Menu):
             self.attached_item = menu_item
 
         self.menu_items[str(obj_path)] = menu_item
-        
+
         # sort function
         position = 0
         for i in self.menu_items:
@@ -222,7 +222,7 @@ class DeviceGroups():
             return
 
         position = self._position(dev['dev_class'])
-        
+
         #sort function
         name = dev.backend_domain['name'] + ':' + dev['ident']
         for i in self.menu_items:
