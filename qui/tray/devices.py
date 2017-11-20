@@ -19,7 +19,6 @@ import qubesadmin
 import qui.decorators
 import qui.models.qubes
 
-DEVICES = qui.models.qubes.DevicesManager()
 DOMAINS = qui.models.qubes.DomainManager()
 LABELS = qui.models.qubes.LabelsManager()
 QUBES_APP = qubesadmin.Qubes()
@@ -177,11 +176,14 @@ class DomainMenu(Gtk.Menu):
 class DeviceItem(Gtk.ImageMenuItem):
     ''' MenuItem showing the device data and a :class:`DomainMenu`. '''
 
-    def __init__(self, dev_obj_path: dbus.ObjectPath, *args, **kwargs):
+    def __init__(self, dev_obj_path: dbus.ObjectPath,
+                 device_manager, *args, **kwargs):
         "docstring"
         super().__init__(*args, **kwargs)
+        self.device_manager = device_manager
 
-        self.dev = DEVICES[dev_obj_path]  # type: qui.models.qubes.Device
+        self.dev = \
+            self.device_manager[dev_obj_path]  # type: qui.models.qubes.Device
         self.dev_class = self.dev["dev_class"]
         label_path = self.dev.backend_domain['label']  # type: dbus.ObjectPath
         vm_icon = LABELS[label_path]["icon"]  # type: Gtk.Image
@@ -195,12 +197,13 @@ class DeviceItem(Gtk.ImageMenuItem):
 
 
 class DeviceGroups():
-    def __init__(self, menu: Gtk.Menu):
+    def __init__(self, menu: Gtk.Menu, device_manager):
         self.positions = {}
         self.separators = {}
         self.counters = {}
         self.menu = menu
         self.menu_items = []
+        self.device_manager = device_manager
 
         for pos, dev_type in enumerate(DEV_TYPES):
             self.counters[dev_type] = 0
@@ -213,11 +216,11 @@ class DeviceGroups():
             self.positions[dev_type] = pos
             self.separators[dev_type] = separator
 
-        DEVICES.connect_to_signal("Added", self.add)
-        DEVICES.connect_to_signal("Removed", self.remove)
+        self.device_manager.connect_to_signal("Added", self.add)
+        self.device_manager.connect_to_signal("Removed", self.remove)
 
     def add(self, dev_obj_path: dbus.ObjectPath):
-        dev = DEVICES[dev_obj_path]
+        dev = self.device_manager[dev_obj_path]
         if dev['dev_class'] not in DEV_TYPES:
             return
 
@@ -243,8 +246,8 @@ class DeviceGroups():
             return self.positions[dev_type] - self.counters[dev_type] + 1
 
     def _insert(self, dev_obj_path: dbus.ObjectPath, position: int) -> None:
-        dev = DEVICES[dev_obj_path]
-        menu_item = DeviceItem(dev_obj_path)
+        dev = self.device_manager[dev_obj_path]
+        menu_item = DeviceItem(dev_obj_path, self.device_manager)
         self.menu.insert(menu_item, position)
         self.counters[dev["dev_class"]] += 1
         self.menu_items.append(menu_item)
@@ -256,6 +259,7 @@ class DeviceGroups():
         for item in self.menu_items:
             if item.obj_path == dev_obj_path:
                 self.menu.remove(item)
+                self.menu_items.remove(item)
                 self.counters[item.dev_class] -= 1
                 self._unshift_positions(item.dev_class)
                 self._recalc_separators()
@@ -297,7 +301,8 @@ class DevicesTray(Gtk.Application):
         super(DevicesTray, self).__init__()
         self.name = app_name
         self.tray_menu = Gtk.Menu()
-        self.devices = DeviceGroups(self.tray_menu)
+        self.device_manager = qui.models.qubes.DevicesManager()
+        self.devices = DeviceGroups(self.tray_menu, self.device_manager)
 
         self.ind = appindicator.Indicator.new(
             'Devices Widget', "media-removable",
@@ -306,7 +311,7 @@ class DevicesTray(Gtk.Application):
         self.ind.set_menu(self.tray_menu)
 
     def run(self):  # pylint: disable=arguments-differ
-        for obj_path in DEVICES.children:
+        for obj_path in self.device_manager.children:
             self.devices.add(obj_path)
 
         self.tray_menu.show_all()
