@@ -187,13 +187,30 @@ class DeviceItem(Gtk.ImageMenuItem):
         self.dev_class = self.dev["dev_class"]
         label_path = self.dev.backend_domain['label']  # type: dbus.ObjectPath
         vm_icon = LABELS[label_path]["icon"]  # type: Gtk.Image
-        hbox = qui.decorators.device_hbox(self.dev)  # type: Gtk.Box
+        self.hbox = qui.decorators.device_hbox(
+            self.dev,
+            attached=self.dev.frontend_domain is not None)  # type: Gtk.Box
 
         self.set_image(qui.decorators.create_icon(vm_icon))
         self.obj_path = dev_obj_path
-        self.add(hbox)
+        self.add(self.hbox)
         submenu = DomainMenu(self.dev)
         self.set_submenu(submenu)
+
+        self.dev.connect_to_signal('Attached', self.attach)
+        self.dev.connect_to_signal('Detached', self.detach)
+
+    def attach(self, dev_path):
+        self.remove(self.hbox)
+        self.hbox = qui.decorators.device_hbox(self.dev, attached=True)
+        self.add(self.hbox)
+        self.show_all()
+
+    def detach(self, dev_path):
+        self.remove(self.hbox)
+        self.hbox = qui.decorators.device_hbox(self.dev, attached=False)
+        self.add(self.hbox)
+        self.show_all()
 
 
 class DeviceGroups():
