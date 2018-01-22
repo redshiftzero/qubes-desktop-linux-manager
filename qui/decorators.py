@@ -73,7 +73,7 @@ class DomainDecorator(PropertiesDecorator):
         return label
 
 
-def device_hbox(dev: Device) -> Gtk.Box:
+def device_hbox(dev: Device, attached=False) -> Gtk.Box:
     ''' Returns a :class:`Gtk.Box` containing the device name & icon.. '''
     if dev['dev_class'] == 'block':
         icon = 'drive-removable-media'
@@ -85,7 +85,12 @@ def device_hbox(dev: Device) -> Gtk.Box:
         icon = 'emblem-important'
     dev_icon = create_icon(icon)
 
-    name_label = Gtk.Label(dev.name, xalign=0)
+    name_label = Gtk.Label(xalign=0)
+    if attached:
+        name_label.set_markup(
+            '<b>' + dev.name + ' (' + dev.frontend_domain['name'] + ')</b>')
+    else:
+        name_label.set_text(dev.name)
     name_label.set_max_width_chars(64)
     name_label.set_ellipsize(Pango.EllipsizeMode.END)
 
