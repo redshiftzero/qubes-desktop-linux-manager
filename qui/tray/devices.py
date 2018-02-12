@@ -199,6 +199,15 @@ class DeviceItem(Gtk.ImageMenuItem):
 
         self.dev.connect_to_signal('Attached', self.attach)
         self.dev.connect_to_signal('Detached', self.detach)
+        DOMAINS.connect_to_signal('Halted', self.vm_shutdown)
+        DOMAINS.connect_to_signal('Failed', self.vm_shutdown)
+        DOMAINS.connect_to_signal('Unknown', self.vm_shutdown)
+
+    def vm_shutdown(self, _, vm_obj_path):
+        print("frontend domain: ", repr(self.dev.frontend_domain), type(self.dev.frontend_domain))
+        print("vmobjpath: ", repr(DOMAINS.children[vm_obj_path]), type(DOMAINS.children[vm_obj_path]))
+        if self.dev.frontend_domain == DOMAINS.children[vm_obj_path]:
+            self.detach(None)
 
     def attach(self, dev_path):
         self.remove(self.hbox)
