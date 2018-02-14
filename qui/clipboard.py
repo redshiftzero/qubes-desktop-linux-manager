@@ -77,7 +77,7 @@ class EventHandler(pyinotify.ProcessEvent):
     def _notify(self, body):
         # pylint: disable=attribute-defined-outside-init
         self.last_id = self.notifications_iface.Notify(
-            '', self.last_id, '', 'Qubes Clipboard', body, [], [], 5)
+            '', self.last_id, '', 'Qubes Clipboard', body, [], [], 5000)
 
     def process_IN_CLOSE_WRITE(self, _):
         ''' Reacts to modifications of the FROM file '''
