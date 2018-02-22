@@ -53,6 +53,7 @@ Requires:  qubes-dbus
 Requires:	 libappindicator-gtk3
 Requires:	 python3-systemd
 Requires:  gtk3
+Requires: python3-qubesadmin >= 4.0.13
 
 Provides:   qui = %{version}-%{release}
 Obsoletes:  qui < 4.0.0

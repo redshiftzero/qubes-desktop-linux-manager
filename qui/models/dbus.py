@@ -135,6 +135,8 @@ class Properties(Model, collections.MutableMapping):
             # pylint: disable=unused-argument
             for key, value in changed_properties.items():
                 self._data[key] = value
+            for key in invalidated:
+                del self._data[key]
 
         proxy.connect_to_signal(PROPERTIES_CHANGED, _update,
                                 dbus_interface=PROPERTIES_INTERFACE)
