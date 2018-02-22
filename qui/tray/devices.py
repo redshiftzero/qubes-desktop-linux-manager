@@ -204,8 +204,6 @@ class DeviceItem(Gtk.ImageMenuItem):
         DOMAINS.connect_to_signal('Unknown', self.vm_shutdown)
 
     def vm_shutdown(self, _, vm_obj_path):
-        print("frontend domain: ", repr(self.dev.frontend_domain), type(self.dev.frontend_domain))
-        print("vmobjpath: ", repr(DOMAINS.children[vm_obj_path]), type(DOMAINS.children[vm_obj_path]))
         if self.dev.frontend_domain == DOMAINS.children[vm_obj_path]:
             self.detach(None)
 
