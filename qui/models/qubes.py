@@ -19,6 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 ''' Data Models '''
+from functools import partial
 from typing import Any  # pylint: disable=unused-import
 
 import dbus
@@ -46,12 +47,20 @@ class _Singleton(type):
         return cls._instances[cls]
 
 
+class PatientDBusConnection(dbus.bus.BusConnection, metaclass=_Singleton):
+    def __init__(self):
+        super().__init__()
+        seconds = 300
+        self.call_async = partial(self.call_async, timeout=seconds)
+        self.call_blocking = partial(self.call_blocking, timeout=seconds)
+
+
 class LabelsManager(ObjectManager):
     ''' Wraper around `org.qubes.Labels1` '''
     __metaclass__ = _Singleton
 
     def __init__(self):
-        bus = dbus.SessionBus()  # pylint: disable=no-member
+        bus = PatientDBusConnection()  # pylint: disable=no-member
         proxy = bus.get_object('org.qubes.Labels1', '/org/qubes/Labels1',
                                follow_name_owner_changes=True)
         super().__init__(proxy, cls=Label)
@@ -119,7 +128,7 @@ class DevicesManager(ObjectManager):
     __metaclass__ = _Singleton
 
     def __init__(self):
-        self.bus = dbus.SessionBus()  # pylint: disable=no-member
+        self.bus = PatientDBusConnection()  # pylint: disable=no-member
         proxy = self.bus.get_object('org.qubes.Devices1', '/org/qubes/Devices1',
                                follow_name_owner_changes=True)
         super().__init__(proxy, cls=Device)
@@ -178,7 +187,7 @@ class DomainManager(Properties,ObjectManager):
     __metaclass__ = _Singleton
 
     def __init__(self):
-        self.bus = dbus.SessionBus()  # pylint: disable=no-member
+        self.bus = PatientDBusConnection()  # pylint: disable=no-member
         proxy = self.bus.get_object('org.qubes.DomainManager1',
                                     '/org/qubes/DomainManager1',
                                     follow_name_owner_changes=True)
@@ -205,7 +214,7 @@ class DomainManager(Properties,ObjectManager):
 
     def AddObject(self, what, path):
         child_data = self.GetManagedObjects()
-        bus = dbus.SessionBus()
+        bus = PatientDBusConnection()
         for child_path, _kwargs in child_data.items():
             if child_path == path:
                 _data = list(_kwargs.values())[0]
