@@ -214,6 +214,8 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         if 'label' in changed_properties:
             self.set_image(self.decorator.icon())
 
+        self._set_image(self._state())
+
 class DomainTray(Gtk.Application):
     ''' A tray icon application listing all but halted domains. ” '''
 
@@ -241,6 +243,7 @@ class DomainTray(Gtk.Application):
         vm_widget = self.menu_items[vm_path]
         self.tray_menu.remove(vm_widget)
         del self.menu_items[vm_path]
+        self.tray_menu.queue_draw()
 
     def update_domain_item(self, _, vm_path):
         ''' Add/Replace the menu item with the started menu for the specified vm in the tray'''
@@ -263,6 +266,7 @@ class DomainTray(Gtk.Application):
         self.tray_menu.insert(domain_item, position)
         self.menu_items[vm_path] = domain_item
         self.tray_menu.show_all()
+        self.tray_menu.queue_draw()
 
     def run(self):  # pylint: disable=arguments-differ
         for signal_name, handler_function in self.signal_callbacks.items():

@@ -128,11 +128,13 @@ class DomainMenu(Gtk.Menu):
 
         self.insert(menu_item, position)
         self.show_all()
+        self.queue_draw()
 
     def remove_vm(self, _, vm_obj_path):
         menu_item = self.menu_items[vm_obj_path]
         self.remove(menu_item)
         self.show_all()
+        self.queue_draw()
 
     def dev_attached(self, vm_obj_path):
         menu_item = self.menu_items[vm_obj_path]
