@@ -25,7 +25,7 @@ class PoolUsageData:
         self.__populate_pools()
 
     def __populate_pools(self):
-        for pool in self.qubes_app.pools.values():
+        for pool in sorted(self.qubes_app.pools.values()):
             self.pools.append(pool)
             if pool.size == 0:
                 continue
@@ -35,7 +35,6 @@ class PoolUsageData:
                 self.warning_message.append(
                     "\n{:.1%} space left in pool {}".format(
                         1-pool.usage/pool.size, pool.name))
-        self.pools = sorted(self.pools)
 
     def get_pools_widgets(self):
         for p in self.pools:

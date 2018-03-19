@@ -134,6 +134,6 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 %{_bindir}/qui-disk-space
 /etc/xdg/autostart/qui-domains.desktop
 /etc/xdg/autostart/qui-devices.desktop
-/etc/xdg/autostart/qui-clipboard.dsizeesktop
+/etc/xdg/autostart/qui-clipboard.desktop
 /etc/xdg/autostart/qui-disk-space.desktop
 /usr/share/icons/Adwaita/22x22/devices/generic-usb.png
