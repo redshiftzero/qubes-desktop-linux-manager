@@ -80,6 +80,7 @@ mkdir -p $RPM_BUILD_ROOT/etc/xdg/autostart
 cp autostart/qui-domains.desktop $RPM_BUILD_ROOT/etc/xdg/autostart
 cp autostart/qui-devices.desktop $RPM_BUILD_ROOT/etc/xdg/autostart
 cp autostart/qui-clipboard.desktop $RPM_BUILD_ROOT/etc/xdg/autostart
+cp autostart/qui-disk-space.desktop $RPM_BUILD_ROOT/etc/xdg/autostart
 mkdir -p $RPM_BUILD_ROOT/usr/share/icons/Adwaita/22x22/devices/
 cp icons/22x22/generic-usb.png $RPM_BUILD_ROOT/usr/share/icons/Adwaita/22x22/devices/generic-usb.png
 
@@ -125,11 +126,14 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 %{python3_sitelib}/qui/tray/__init__.py
 %{python3_sitelib}/qui/tray/domains.py
 %{python3_sitelib}/qui/tray/devices.py
+%{python3_sitelib}/qui/tray/disk_space.py
 
 %{_bindir}/qui-ls
 %{_bindir}/qui-domains
 %{_bindir}/qui-devices
+%{_bindir}/qui-disk-space
 /etc/xdg/autostart/qui-domains.desktop
 /etc/xdg/autostart/qui-devices.desktop
-/etc/xdg/autostart/qui-clipboard.desktop
+/etc/xdg/autostart/qui-clipboard.dsizeesktop
+/etc/xdg/autostart/qui-disk-space.desktop
 /usr/share/icons/Adwaita/22x22/devices/generic-usb.png

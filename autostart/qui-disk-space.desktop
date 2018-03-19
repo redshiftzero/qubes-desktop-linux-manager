@@ -1,0 +1,7 @@
+[Desktop Entry]
+Icon=drive-harddisk
+Name=Disk Space Tray
+Categories=System;Monitor;
+Exec=python3 -m qui.tray.disk_space
+Terminal=false
+Type=Application

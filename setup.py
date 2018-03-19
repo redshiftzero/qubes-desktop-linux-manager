@@ -15,6 +15,7 @@ setup(name='qui',
           'gui_scripts': [
               'qui-ls = qui.domains_table:main',
               'qui-domains = qui.tray.domains:main',
-              'qui-devices = qui.tray.devices:main'
+              'qui-devices = qui.tray.devices:main',
+              'qui-disk-size = qui.tray.disk_space:main'
           ]
       })
