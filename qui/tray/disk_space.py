@@ -27,7 +27,7 @@ class PoolUsageData:
     def __populate_pools(self):
         for pool in sorted(self.qubes_app.pools.values()):
             self.pools.append(pool)
-            if pool.size == 0:
+            if pool.size is None:
                 continue
             self.total_size += pool.size
             self.used_size += pool.usage
@@ -51,18 +51,17 @@ class PoolUsageData:
         percentage_use = Gtk.Label()
         numeric_use = Gtk.Label()
 
-        if int(pool.size) > 0:
-            # TODO: add checking if pool is not contained in another pool
+        if pool.size is not None and 'included_in' not in pool.config:
             pool_name.set_markup('<b>{}</b>'.format(pool.name))
 
-            percentage = int(pool.usage)/int(pool.size)
+            percentage = pool.usage/pool.size
             percentage_use.set_markup(colored_percentage(percentage))
             percentage_use.set_justify(Gtk.Justification.RIGHT)
 
             numeric_use.set_markup(
                 '<span color=\'grey\'><i>{}/{}</i></span>'.format(
-                    size_to_human(int(pool.usage)),
-                    size_to_human(int(pool.size))))
+                    size_to_human(pool.usage),
+                    size_to_human(pool.size)))
             numeric_use.set_justify(Gtk.Justification.RIGHT)
 
         else:
@@ -165,7 +164,7 @@ class DiskSpace(Gtk.Application):
         progress_bar = Gtk.LevelBar()
         progress_bar.set_min_value(0)
         progress_bar.set_max_value(100)
-        progress_bar.set_value(int(pool_data.get_usage()*100))
+        progress_bar.set_value(pool_data.get_usage()*100)
         progress_bar.set_vexpand(True)
         progress_bar.set_hexpand(True)
         progress_bar.set_margin_left(20)
