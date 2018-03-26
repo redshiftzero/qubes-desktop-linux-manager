@@ -4,8 +4,13 @@ import subprocess
 import sys
 
 # pylint: disable=wrong-import-position,ungrouped-imports
+import traceback
+
 import dbus
 import dbus.mainloop.glib
+
+from qubesadmin import exc
+
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)  # isort:skip
 
 import gi
@@ -158,12 +163,21 @@ class DomainMenu(Gtk.Menu):
         if self.attached_item is not None:
             self.detach()
 
-        menu_item.vm.devices[menu_item.dev_class].attach(menu_item.assignment)
-
-        subprocess.call([
-            'notify-send',
-            "Attaching %s to %s" % (self.dev.name, menu_item.vm)
-        ])
+        try:
+            menu_item.vm.devices[menu_item.dev_class].attach(
+                menu_item.assignment)
+            subprocess.call(
+                ['notify-send',
+                 "Attaching %s to %s" % (self.dev.name, menu_item.vm)])
+        except exc.QubesException as ex:
+            subprocess.call(
+                ['notify-send', '-t', '15000', '-i', 'dialog-error',
+                 'Attaching device {0} to {1} failed. Error: {2}'.format(
+                     self.dev.name,
+                     menu_item.vm,
+                     ex)])
+        except Exception as ex:
+            traceback.print_exc(file=sys.stderr)
 
     def detach(self):
         menu_item = self.attached_item
