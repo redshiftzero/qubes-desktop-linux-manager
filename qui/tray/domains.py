@@ -117,6 +117,26 @@ class LogItem(Gtk.ImageMenuItem):
             self.connect('activate', callback)
 
 
+class RunTerminalItem(Gtk.ImageMenuItem):
+    ''' Run Terminal menu Item. When activated runs a terminal emulator. '''
+
+    def __init__(self, vm):
+        super().__init__()
+        self.vm = vm
+
+        icon = Gtk.IconTheme.get_default().load_icon('utilities-terminal', 16,
+                                                     0)
+        image = Gtk.Image.new_from_pixbuf(icon)
+
+        self.set_image(image)
+        self.set_label('Run Terminal')
+
+        self.connect('activate', self.run_terminal)
+
+    def run_terminal(self, _item):
+        self.vm.RunService('qubes.StartApp+qubes-run-terminal')
+
+
 class StartedMenu(Gtk.Menu):
     ''' The sub-menu for a started domain'''
 
@@ -126,9 +146,11 @@ class StartedMenu(Gtk.Menu):
 
         preferences = PreferencesItem(self.vm)
         shutdown_item = ShutdownItem(self.vm)
+        runterminal_item = RunTerminalItem(self.vm)
 
         self.add(preferences)
         self.add(shutdown_item)
+        self.add(runterminal_item)
 
 
 class DebugMenu(Gtk.Menu):
