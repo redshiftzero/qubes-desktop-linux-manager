@@ -38,36 +38,32 @@ class DomainDecorator(PropertiesDecorator):
     # pylint: disable=missing-docstring
     def __init__(self, vm: qubesadmin.vm.QubesVM, margins=(5, 5)) -> None:
         super(DomainDecorator, self).__init__(vm, margins)
+        self.vm = vm
 
     def name(self):
-        label = Gtk.Label(self.obj['name'], xalign=0)
+        label = Gtk.Label(self.vm.name, xalign=0)
         self.set_margins(label)
         return label
 
-    def memory(self) -> Gtk.Label:
+    def memory(self, memory=0) -> Gtk.Label:
         label = Gtk.Label(
-            str(int(self.obj['memory_usage'] / 1024)) + ' MB', xalign=0)
+            str(int(memory / 1024)) + ' MB', xalign=0)  # TODO: fixme
         self.set_margins(label)
         label.set_sensitive(False)
         return label
 
-    def icon(self) -> Gtk.Image:
+    def icon(self) -> Gtk.Image: # TODO: is this working?
         ''' Returns a `Gtk.Image` containing the colored lock icon '''
-        label_path = self.obj['label']
-        assert label_path in LABELS.children
-        label = LABELS.children[label_path]
-        if label is None:
-            label = LABELS.BLACK  # pylint: disable=no-member
-        icon_vm = Gtk.IconTheme.get_default().load_icon(label['icon'], 16, 0)
+        icon_vm = Gtk.IconTheme.get_default().load_icon(self.vm.label.icon, 16, 0)
         icon_img = Gtk.Image.new_from_pixbuf(icon_vm)
         return icon_img
 
-    def netvm(self) -> Gtk.Label:
-        netvm = self.obj['netvm']
+    def netvm(self) -> Gtk.Label:  # TODO: Wot is this?
+        netvm = self.vm.netvm
         if netvm is None:
             label = Gtk.Label('No', xalign=0)
         else:
-            label = Gtk.Label(netvm['name'], xalign=0)
+            label = Gtk.Label(netvm.name, xalign=0)
 
         self.set_margins(label)
         return label
