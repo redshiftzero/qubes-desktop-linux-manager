@@ -49,7 +49,7 @@ BuildRequires:  python3-devel
 Requires:  python3-setuptools
 Requires:  python3-dbus
 Requires:  python3-gbulb
-Requires:  qubes-dbus
+Requires:  qubes-dbus >= 1.0.5
 Requires:	 libappindicator-gtk3
 Requires:	 python3-systemd
 Requires:  gtk3
