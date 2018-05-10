@@ -262,6 +262,13 @@ class DomainTray(Gtk.Application):
 
     def remove_menu(self, _, vm_path):
         ''' Remove the menu item for the specified domain from the tray'''
+        vm = self.domain_manager.children[vm_path]
+        domain_item = DomainMenuItem(vm)
+        subprocess.call([
+            'notify-send',
+            "Domain %s is %s" % (vm['name'], str(vm['state']).lower())
+        ])
+
         vm_widget = self.menu_items[vm_path]
         self.tray_menu.remove(vm_widget)
         del self.menu_items[vm_path]
