@@ -103,12 +103,12 @@ class DiskSpace(Gtk.Application):
         warning = pool_data.get_warning()
 
         if warning:
-            self.icon.set_from_stock(Gtk.STOCK_DIALOG_WARNING)
+            self.icon.set_from_icon_name("dialog-warning")
             text = "WARNING! You are running out of disk space." + \
                    ''.join(warning)
             self.icon.set_tooltip_markup(text)
         else:
-            self.icon.set_from_stock(Gtk.STOCK_HARDDISK)
+            self.icon.set_from_icon_name("drive-harddisk")
             self.icon.set_tooltip_markup('')
 
         return True  # needed for Gtk to correctly loop the function
