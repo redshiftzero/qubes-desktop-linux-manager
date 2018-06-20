@@ -9,10 +9,7 @@ gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gtk, Pango  # isort:skip
 
 import qubesadmin
-import qui.models.qubes
 from qui.models.qubes import Device, Domain
-
-LABELS = qui.models.qubes.LabelsManager()
 
 
 class PropertiesDecorator():
@@ -47,18 +44,18 @@ class DomainDecorator(PropertiesDecorator):
 
     def memory(self, memory=0) -> Gtk.Label:
         label = Gtk.Label(
-            str(int(memory / 1024)) + ' MB', xalign=0)  # TODO: fixme
+            str(int(memory / 1024)) + ' MB', xalign=0)
         self.set_margins(label)
         label.set_sensitive(False)
         return label
 
-    def icon(self) -> Gtk.Image: # TODO: is this working?
+    def icon(self) -> Gtk.Image:
         ''' Returns a `Gtk.Image` containing the colored lock icon '''
         icon_vm = Gtk.IconTheme.get_default().load_icon(self.vm.label.icon, 16, 0)
         icon_img = Gtk.Image.new_from_pixbuf(icon_vm)
         return icon_img
 
-    def netvm(self) -> Gtk.Label:  # TODO: Wot is this?
+    def netvm(self) -> Gtk.Label:
         netvm = self.vm.netvm
         if netvm is None:
             label = Gtk.Label('No', xalign=0)

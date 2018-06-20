@@ -2,11 +2,8 @@
 # -*- coding: utf-8 -*-
 ''' A menu listing domains '''
 import asyncio
-import signal
 import subprocess
 import sys
-from enum import Enum
-
 import os
 
 import qubesadmin
@@ -18,36 +15,11 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 import gbulb
 gbulb.install()
 
-
 # pylint: disable=wrong-import-position
 import qui.decorators
-
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gio, Gtk  # isort:skip
-
-class STATE(Enum):
-    FAILED = 1
-    TRANSIENT = 2
-    RUNNING = 3
-
-
-def vm_label(decorator):
-    hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-    hbox.pack_start(decorator.icon(), False, True, 0)
-    hbox.pack_start(decorator.name(), True, True, 0)
-    hbox.pack_start(decorator.memory(), False, True, 0)
-    return hbox
-
-
-def sub_menu_hbox(name, image_name=None) -> Gtk.Widget:
-    icon = Gtk.IconTheme.get_default().load_icon(image_name, 16, 0)
-    image = Gtk.Image.new_from_pixbuf(icon)
-
-    hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-    hbox.pack_start(image, False, False, 0)
-    hbox.pack_start(Gtk.Label(name), True, False, 0)
-    return hbox
 
 
 class ShutdownItem(Gtk.ImageMenuItem):
@@ -122,28 +94,7 @@ class LogItem(Gtk.ImageMenuItem):
         self.connect('activate', self.launch_log_viewer)
 
     def launch_log_viewer(self, *args, **kwargs):
-        pass
         subprocess.Popen(['qubes-log-viewer', self.path])
-
-
-class RunTerminalItem(Gtk.ImageMenuItem):
-    ''' Run Terminal menu Item. When activated runs a terminal emulator. '''
-
-    def __init__(self, vm):
-        super().__init__()
-        self.vm = vm
-
-        icon = Gtk.IconTheme.get_default().load_icon('utilities-terminal', 16,
-                                                     0)
-        image = Gtk.Image.new_from_pixbuf(icon)
-
-        self.set_image(image)
-        self.set_label('Run Terminal')
-
-        self.connect('activate', self.run_terminal)
-
-    def run_terminal(self, _item):
-        self.vm.RunService('qubes.StartApp+qubes-run-terminal')
 
 
 class StartedMenu(Gtk.Menu):
@@ -155,11 +106,9 @@ class StartedMenu(Gtk.Menu):
 
         preferences = PreferencesItem(self.vm)
         shutdown_item = ShutdownItem(self.vm)
-        runterminal_item = RunTerminalItem(self.vm)
 
         self.add(preferences)
         self.add(shutdown_item)
-        self.add(runterminal_item)
 
 
 class DebugMenu(Gtk.Menu):
@@ -206,7 +155,6 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         else:
             self.hide_spinner()
 
-
         self.memory = self.decorator.memory()
         hbox.pack_start(self.memory, False, True, 0)
 
@@ -214,7 +162,6 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
         self._set_submenu(self.vm.get_power_state())
         self._set_image()
-
 
     def _set_image(self):
         self.set_image(self.decorator.icon())
@@ -365,7 +312,7 @@ class DomainTray(Gtk.Application):
         for vm in self.qapp.domains:
             if vm.is_running() and vm.klass != 'AdminVM':
                 self.add_domain_item(vm, None)
-        # self.connect('shutdown', self._disconnect_signals) # TODO: how do you disconnect signals
+        self.connect('shutdown', self._disconnect_signals)
 
     def run(self):  # pylint: disable=arguments-differ
         self.initialize_menu()
