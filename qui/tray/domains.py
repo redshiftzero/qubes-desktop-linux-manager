@@ -7,6 +7,8 @@ import subprocess
 import sys
 from enum import Enum
 
+import os
+
 import qubesadmin
 import qubesadmin.events
 
@@ -62,7 +64,10 @@ class ShutdownItem(Gtk.ImageMenuItem):
         self.set_image(image)
         self.set_label('Shutdown')
 
-        self.connect('activate', self.vm.shutdown)
+        self.connect('activate', self.perform_shutdown)
+
+    def perform_shutdown(self, *args, **kwargs):
+        self.vm.shutdown()
 
 
 class KillItem(Gtk.ImageMenuItem):
@@ -78,11 +83,14 @@ class KillItem(Gtk.ImageMenuItem):
         self.set_image(image)
         self.set_label('Kill')
 
-        self.connect('activate', self.vm.kill)
+        self.connect('activate', self.perform_kill)
+
+    def perform_kill(self, *args, **kwargs):
+        self.vm.kill()
 
 
 class PreferencesItem(Gtk.ImageMenuItem):
-    ''' TODO: Preferences menu Item. When activated shows preferences dialog '''
+    ''' Preferences menu Item. When activated shows preferences dialog '''
 
     def __init__(self, vm):
         super().__init__()
@@ -97,20 +105,25 @@ class PreferencesItem(Gtk.ImageMenuItem):
         self.connect('activate', self.launch_preferences_dialog)
 
     def launch_preferences_dialog(self, _item):
-        subprocess.call(['qubes-vm-settings', self.vm.name])
+        subprocess.Popen(['qubes-vm-settings', self.vm.name])
 
 
 class LogItem(Gtk.ImageMenuItem):
-    def __init__(self, vm, name, callback=None):
+    def __init__(self, name, path):
         super().__init__()
+        self.path = path
+
         image = Gtk.Image.new_from_file(
             "/usr/share/icons/HighContrast/16x16/apps/logviewer.png")
 
-        decorator = qui.decorators.DomainDecorator(vm)
         self.set_image(image)
         self.set_label(name)
-        if callback:
-            self.connect('activate', callback)
+
+        self.connect('activate', self.launch_log_viewer)
+
+    def launch_log_viewer(self, *args, **kwargs):
+        pass
+        subprocess.Popen(['qubes-log-viewer', self.path])
 
 
 class RunTerminalItem(Gtk.ImageMenuItem):
@@ -155,15 +168,20 @@ class DebugMenu(Gtk.Menu):
     def __init__(self, vm):
         super().__init__()
         self.vm = vm
-        console = LogItem(self.vm, "Console Log")
-        guid = LogItem(self.vm, "GUI Daemon Log")
-        qrexec = LogItem(self.vm, "Qrexec Log")
+
+        logs = [
+            ("Console Log", "/var/log/xen/console/guest-" + vm.name + ".log"),
+            ("QEMU Console Log", "/var/log/xen/console/guest-" + vm.name + "-dm.log"),
+            ]
+
+        for name, path in logs:
+            if os.path.isfile(path):
+                item = LogItem(name, path)
+                self.add(item)
+
         kill = KillItem(self.vm)
         preferences = PreferencesItem(self.vm)
 
-        self.add(console)
-        self.add(qrexec)
-        self.add(guid)
         self.add(preferences)
         self.add(kill)
 
@@ -180,18 +198,17 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         hbox.pack_start(self.name, True, True, 0)
 
         self.spinner = Gtk.Spinner()
-
-        if self.vm.get_power_state() == 'Transient':
-            self.start_spinner()
-        else:
-            self.stop_spinner() #TODO: does this work?
-
         hbox.pack_start(self.spinner, False, True, 0)
+        self.spinner.start()
+
+        if self.vm.get_power_state() != 'Running':
+            self.show_spinner()
+        else:
+            self.hide_spinner()
+
 
         self.memory = self.decorator.memory()
         hbox.pack_start(self.memory, False, True, 0)
-        # vm.proxy.connect_to_signal('PropertiesChanged', self._update, dbus_interface='org.freedesktop.DBus.Properties')
-        # TODO: fix this
 
         self.add(hbox)
 
@@ -201,13 +218,6 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
     def _set_image(self):
         self.set_image(self.decorator.icon())
-        # if self.vm.get_power_state() == :
-        #     failed_pixbuf = Gtk.IconTheme.get_default().load_icon(
-        #         'media-record', 16, 0)
-        #     failed_image = Gtk.Image.new_from_pixbuf(failed_pixbuf)
-        #     self.set_image(failed_image)
-        # else:
-        #     self.set_image(self.decorator.icon())
 
     def _set_submenu(self, state):
         if state == 'Running':
@@ -218,37 +228,34 @@ class DomainMenuItem(Gtk.ImageMenuItem):
             remove.connect('activate', lambda: self.hide)
         else:
             submenu = DebugMenu(self.vm)
+        # This is a workaround for a bug in Gtk which occurs when a
+        # submenu is replaced while it is open.
+        # see https://bugzilla.redhat.com/show_bug.cgi?id=1435911
+        current_submenu = self.get_submenu()
+        if current_submenu:
+            current_submenu.grab_remove()
         self.set_submenu(submenu)
 
-    def start_spinner(self):
-        self.spinner.start()
+    def show_spinner(self):
+        self.spinner.set_no_show_all(False)
         self.spinner.show()
+        self.show_all()
 
-    def stop_spinner(self):
-        self.spinner.stop()
+    def hide_spinner(self):
+        self.spinner.set_no_show_all(True)
         self.spinner.hide()
 
     def update_state(self, state):
         if state == "Running":
-            self.stop_spinner()
+            self.hide_spinner()
         else:
-            self.start_spinner()
+            self.show_spinner()
         self._set_submenu(state)
 
     def update_stats(self, memory_kb):
         text = '{0} MB'.format(int(memory_kb)//1024)
         self.memory.set_text(text)
 
-# # TODO: add upadate label
-#     def _update(self, _, changed_properties, invalidated=None):
-#         if 'memory_usage' in changed_properties:
-#             text = str(int(changed_properties['memory_usage']/1024)) + ' MB'
-#             self.memory.set_text(text)
-#
-#         if 'label' in changed_properties:
-#             self.set_image(self.decorator.icon())
-#
-#         # self._set_image()
 
 class DomainTray(Gtk.Application):
     ''' A tray icon application listing all but halted domains. ” '''
@@ -284,7 +291,8 @@ class DomainTray(Gtk.Application):
         self.dispatcher.add_handler('domain-start', self.emit_notification)
         self.dispatcher.add_handler('domain-start-failed',
                                     self.emit_notification)
-        self.dispatcher.add_handler('domain-stopped', self.emit_notification)
+        self.dispatcher.add_handler('domain-pre-shutdown',
+                                    self.emit_notification)
         self.dispatcher.add_handler('domain-shutdown', self.emit_notification)
 
         self.stats_dispatcher.add_handler('vm-stats', self.update_stats)
@@ -312,9 +320,9 @@ class DomainTray(Gtk.Application):
             notification.set_body('Domain {} is starting.'.format(vm.name))
         elif event == 'domain-start':
             notification.set_body('Domain {} has started.'.format(vm.name))
-        elif event == 'domain-shutdown':
+        elif event == 'domain-pre-shutdown':
             notification.set_body('Domain {} is halting.'.format(vm.name))
-        elif event == 'domain-stopped':
+        elif event == 'domain-shutdown':
             notification.set_body('Domain {} has halted.'.format(vm.name))
         else:
             return
