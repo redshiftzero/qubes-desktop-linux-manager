@@ -349,7 +349,7 @@ def main():
     ]
 
     done, _ = loop.run_until_complete(asyncio.wait(
-        tasks, return_when=asyncio.FIRST_EXCEPTION))
+        tasks, return_when=asyncio.ALL_COMPLETED))
 
 
 if __name__ == '__main__':
