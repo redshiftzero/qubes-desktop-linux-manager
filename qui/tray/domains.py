@@ -200,11 +200,13 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         self.set_submenu(submenu)
 
     def show_spinner(self):
+        self.spinner.start()
         self.spinner.set_no_show_all(False)
         self.spinner.show()
         self.show_all()
 
     def hide_spinner(self):
+        self.spinner.stop()
         self.spinner.set_no_show_all(True)
         self.spinner.hide()
 
