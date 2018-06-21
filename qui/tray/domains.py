@@ -189,10 +189,6 @@ class DomainMenuItem(Gtk.ImageMenuItem):
     def _set_submenu(self, state):
         if state == 'Running':
             submenu = StartedMenu(self.vm)
-        elif state == 'Crashed':
-            submenu = DebugMenu(self.vm)
-            remove = Gtk.MenuItem("Remove")
-            remove.connect('activate', lambda: self.hide)
         else:
             submenu = DebugMenu(self.vm)
         # This is a workaround for a bug in Gtk which occurs when a
@@ -229,7 +225,6 @@ class DomainTray(Gtk.Application):
 
     def __init__(self, app_name, qapp, dispatcher, stats_dispatcher):
         super().__init__()
-        self.name = app_name
         self.qapp = qapp
         self.dispatcher = dispatcher
         self.stats_dispatcher = stats_dispatcher
@@ -245,7 +240,7 @@ class DomainTray(Gtk.Application):
         self.menu_items = {}
 
         self.register_events()
-        self.set_application_id('org.Qubes.qui.domains')
+        self.set_application_id(app_name)
         self.register()  # register Gtk Application
 
     def register_events(self):
@@ -361,7 +356,7 @@ def main():
     stats_dispatcher = qubesadmin.events.EventsDispatcher(
         qapp, api_method='admin.vm.Stats')
     app = DomainTray(
-        'org.qubes.ui.tray.Domains', qapp, dispatcher, stats_dispatcher)
+        'org.qubes.qui.tray.Domains', qapp, dispatcher, stats_dispatcher)
     app.run()
 
     loop = asyncio.get_event_loop()
