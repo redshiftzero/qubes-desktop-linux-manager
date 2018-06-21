@@ -217,6 +217,8 @@ class DomainTray(Gtk.Application):
         self.widget_icon = Gtk.StatusIcon()
         self.widget_icon.set_from_icon_name('qubes-logo-icon')
         self.widget_icon.connect('button-press-event', self.show_menu)
+        self.widget_icon.set_tooltip_markup(
+            '<b>Qubes Domains</b>\nView and manage running domains.')
 
         self.tray_menu = Gtk.Menu()
 
