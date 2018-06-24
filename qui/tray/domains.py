@@ -5,6 +5,7 @@ import asyncio
 import subprocess
 import sys
 import os
+import traceback
 
 import qubesadmin
 import qubesadmin.events
@@ -351,6 +352,7 @@ class DomainTray(Gtk.Application):
         self.dispatcher.remove_handler('domain-stopped', self.emit_notification)
         self.dispatcher.remove_handler('domain-shutdown', self.emit_notification)
 
+
 def main():
     ''' main function '''
     qapp = qubesadmin.Qubes()
@@ -368,7 +370,25 @@ def main():
     ]
 
     done, _ = loop.run_until_complete(asyncio.wait(
-        tasks, return_when=asyncio.ALL_COMPLETED))
+            tasks, return_when=asyncio.FIRST_EXCEPTION))
+
+    for d in done:
+        try:
+            d.result()
+        except Exception as ex:
+            exc_type, exc_value = sys.exc_info()[:2]
+            dialog = Gtk.MessageDialog(
+                None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)
+            dialog.set_title("Houston, we have a problem...")
+            dialog.set_markup(
+                "<b>Whoops. A critical error in Domains Widget has occured.</b>"
+                " This is most likely a bug in the widget. To restart the "
+                "widget, run 'qui-domains' in dom0.")
+            dialog.format_secondary_markup(
+                "\n<b>{}</b>: {}\n{}".format(
+                   exc_type.__name__, exc_value, traceback.format_exc(limit=10)
+                ))
+            dialog.run()
 
 
 if __name__ == '__main__':
