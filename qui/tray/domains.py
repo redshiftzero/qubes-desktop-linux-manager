@@ -293,7 +293,7 @@ class DomainTray(Gtk.Application):
             notification.set_body('Domain {} has halted.'.format(vm.name))
         else:
             return
-        self.send_notification('', notification)
+        self.send_notification(None, notification)
 
     def add_domain_item(self, vm, event, **kwargs):
         # check if it already exists
