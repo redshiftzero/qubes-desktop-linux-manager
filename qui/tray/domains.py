@@ -1,55 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 ''' A menu listing domains '''
-
-import signal
+import asyncio
 import subprocess
 import sys
-from enum import Enum
+import os
+import traceback
 
-import dbus
+import qubesadmin
+import qubesadmin.events
+
 import dbus.mainloop.glib
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
+import gbulb
+gbulb.install()
+
 # pylint: disable=wrong-import-position
 import qui.decorators
-
-from qui.models.qubes import DomainManager
-
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
-from gi.repository import GObject, Gtk  # isort:skip
-
-gi.require_version('AppIndicator3', '0.1')  # isort:skip
-from gi.repository import AppIndicator3 as appindicator  # isort:skip
-
-DOMAIN_MANAGER_INTERFACE = "org.qubes.DomainManager1"
-DOMAIN_MANAGER_PATH = "/org/qubes/DomainManager1"
-DBusSignalMatch = dbus.connection.SignalMatch
-
-
-class STATE(Enum):
-    FAILED = 1
-    TRANSIENT = 2
-    RUNNING = 3
-
-
-def vm_label(decorator):
-    hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-    hbox.pack_start(decorator.icon(), False, True, 0)
-    hbox.pack_start(decorator.name(), True, True, 0)
-    hbox.pack_start(decorator.memory(), False, True, 0)
-    return hbox
-
-
-def sub_menu_hbox(name, image_name=None) -> Gtk.Widget:
-    icon = Gtk.IconTheme.get_default().load_icon(image_name, 16, 0)
-    image = Gtk.Image.new_from_pixbuf(icon)
-
-    hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-    hbox.pack_start(image, False, False, 0)
-    hbox.pack_start(Gtk.Label(name), True, False, 0)
-    return hbox
+from gi.repository import Gio, Gtk  # isort:skip
 
 
 class ShutdownItem(Gtk.ImageMenuItem):
@@ -66,7 +37,10 @@ class ShutdownItem(Gtk.ImageMenuItem):
         self.set_image(image)
         self.set_label('Shutdown')
 
-        self.connect('activate', self.vm.Shutdown)
+        self.connect('activate', self.perform_shutdown)
+
+    def perform_shutdown(self, *args, **kwargs):
+        self.vm.shutdown()
 
 
 class KillItem(Gtk.ImageMenuItem):
@@ -82,11 +56,14 @@ class KillItem(Gtk.ImageMenuItem):
         self.set_image(image)
         self.set_label('Kill')
 
-        self.connect('activate', self.vm.Kill)
+        self.connect('activate', self.perform_kill)
+
+    def perform_kill(self, *args, **kwargs):
+        self.vm.kill()
 
 
 class PreferencesItem(Gtk.ImageMenuItem):
-    ''' TODO: Preferences menu Item. When activated shows preferences dialog '''
+    ''' Preferences menu Item. When activated shows preferences dialog '''
 
     def __init__(self, vm):
         super().__init__()
@@ -101,29 +78,31 @@ class PreferencesItem(Gtk.ImageMenuItem):
         self.connect('activate', self.launch_preferences_dialog)
 
     def launch_preferences_dialog(self, _item):
-        subprocess.call(['qubes-vm-settings', self.vm['name']])
+        subprocess.Popen(['qubes-vm-settings', self.vm.name])
 
 
 class LogItem(Gtk.ImageMenuItem):
-    def __init__(self, vm, name, callback=None):
+    def __init__(self, name, path):
         super().__init__()
+        self.path = path
+
         image = Gtk.Image.new_from_file(
             "/usr/share/icons/HighContrast/16x16/apps/logviewer.png")
 
-        decorator = qui.decorators.DomainDecorator(vm)
         self.set_image(image)
         self.set_label(name)
-        if callback:
-            self.connect('activate', callback)
+
+        self.connect('activate', self.launch_log_viewer)
+
+    def launch_log_viewer(self, *args, **kwargs):
+        subprocess.Popen(['qubes-log-viewer', self.path])
 
 
 class RunTerminalItem(Gtk.ImageMenuItem):
     ''' Run Terminal menu Item. When activated runs a terminal emulator. '''
-
     def __init__(self, vm):
         super().__init__()
         self.vm = vm
-
         icon = Gtk.IconTheme.get_default().load_icon('utilities-terminal', 16,
                                                      0)
         image = Gtk.Image.new_from_pixbuf(icon)
@@ -134,7 +113,7 @@ class RunTerminalItem(Gtk.ImageMenuItem):
         self.connect('activate', self.run_terminal)
 
     def run_terminal(self, _item):
-        self.vm.RunService('qubes.StartApp+qubes-run-terminal')
+        self.vm.run_service('qubes.StartApp+qubes-run-terminal')
 
 
 class StartedMenu(Gtk.Menu):
@@ -159,15 +138,20 @@ class DebugMenu(Gtk.Menu):
     def __init__(self, vm):
         super().__init__()
         self.vm = vm
-        console = LogItem(self.vm, "Console Log")
-        guid = LogItem(self.vm, "GUI Daemon Log")
-        qrexec = LogItem(self.vm, "Qrexec Log")
+
+        logs = [
+            ("Console Log", "/var/log/xen/console/guest-" + vm.name + ".log"),
+            ("QEMU Console Log", "/var/log/xen/console/guest-" + vm.name + "-dm.log"),
+            ]
+
+        for name, path in logs:
+            if os.path.isfile(path):
+                item = LogItem(name, path)
+                self.add(item)
+
         kill = KillItem(self.vm)
         preferences = PreferencesItem(self.vm)
 
-        self.add(console)
-        self.add(qrexec)
-        self.add(guid)
         self.add(preferences)
         self.add(kill)
 
@@ -183,160 +167,228 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         self.name = self.decorator.name()
         hbox.pack_start(self.name, True, True, 0)
 
-        state = self._state()
+        self.spinner = Gtk.Spinner()
+        hbox.pack_start(self.spinner, False, True, 0)
+        self.spinner.start()
 
-        if state not in [STATE.RUNNING, STATE.FAILED]:
-            spinner = Gtk.Spinner()
-            spinner.start()
-            hbox.pack_start(spinner, False, True, 0)
+        if self.vm.get_power_state() != 'Running':
+            self.show_spinner()
+        else:
+            self.hide_spinner()
 
         self.memory = self.decorator.memory()
         hbox.pack_start(self.memory, False, True, 0)
-        vm.proxy.connect_to_signal('PropertiesChanged', self._update, dbus_interface='org.freedesktop.DBus.Properties')
 
         self.add(hbox)
 
-        self._set_submenu(state)
-        self._set_image(state)
+        self._set_submenu(self.vm.get_power_state())
+        self._set_image()
 
-    def _state(self):
-        if self.vm['state'] == 'Started':
-            return STATE.RUNNING
-        elif self.vm['state'] == 'Failed':
-            return STATE.FAILED
-
-        return STATE.TRANSIENT
-
-    def _set_image(self, state):
-        if state == STATE.FAILED:
-            failed_pixbuf = Gtk.IconTheme.get_default().load_icon(
-                'media-record', 16, 0)
-            failed_image = Gtk.Image.new_from_pixbuf(failed_pixbuf)
-            self.set_image(failed_image)
-        else:
-            self.set_image(self.decorator.icon())
+    def _set_image(self):
+        self.set_image(self.decorator.icon())
 
     def _set_submenu(self, state):
-        if state == STATE.RUNNING:
+        if state == 'Running':
             submenu = StartedMenu(self.vm)
-        elif state == STATE.FAILED:
-            submenu = DebugMenu(self.vm)
-            remove = Gtk.MenuItem("Remove")
-            remove.connect('activate', lambda: self.hide)
         else:
             submenu = DebugMenu(self.vm)
+        # This is a workaround for a bug in Gtk which occurs when a
+        # submenu is replaced while it is open.
+        # see https://bugzilla.redhat.com/show_bug.cgi?id=1435911
+        current_submenu = self.get_submenu()
+        if current_submenu:
+            current_submenu.grab_remove()
         self.set_submenu(submenu)
 
+    def show_spinner(self):
+        self.spinner.start()
+        self.spinner.set_no_show_all(False)
+        self.spinner.show()
+        self.show_all()
 
-    def _update(self, _, changed_properties, invalidated=None):
-        if 'memory_usage' in changed_properties:
-            text = str(int(changed_properties['memory_usage']/1024)) + ' MB'
-            self.memory.set_text(text)
+    def hide_spinner(self):
+        self.spinner.stop()
+        self.spinner.set_no_show_all(True)
+        self.spinner.hide()
 
-        if 'label' in changed_properties:
-            self.set_image(self.decorator.icon())
+    def update_state(self, state):
+        if state == "Running":
+            self.hide_spinner()
+        else:
+            self.show_spinner()
+        self._set_submenu(state)
 
-        self._set_image(self._state())
+    def update_stats(self, memory_kb):
+        text = '{0} MB'.format(int(memory_kb)//1024)
+        self.memory.set_text(text)
+
 
 class DomainTray(Gtk.Application):
     ''' A tray icon application listing all but halted domains. ” '''
 
-    def __init__(self, app_name):
+    def __init__(self, app_name, qapp, dispatcher, stats_dispatcher):
         super().__init__()
-        self.name = app_name
+        self.qapp = qapp
+        self.dispatcher = dispatcher
+        self.stats_dispatcher = stats_dispatcher
+
+        self.widget_icon = Gtk.StatusIcon()
+        self.widget_icon.set_from_icon_name('qubes-logo-icon')
+        self.widget_icon.connect('button-press-event', self.show_menu)
+        self.widget_icon.set_tooltip_markup(
+            '<b>Qubes Domains</b>\nView and manage running domains.')
+
         self.tray_menu = Gtk.Menu()
-        self.ind = indicator(self.tray_menu)
-        self.domain_manager = DomainManager()
-        self.signal_matches = {
-        }  # type: Dict[dbus.ObjectPath, List[DBusSignalMatch]]
-        self.menu_items = {}  # type: Dict[dbus.ObjectPath, Gtk.MenuItem]
 
-        self.signal_callbacks = {
-            'Starting': self.update_domain_item,
-            'Started': self.update_domain_item,
-            'Failed': self.update_domain_item,
-            'Halting': self.update_domain_item,
-            'Halted': self.remove_menu,
-            'Unknown': self.update_domain_item,
-        }
+        self.menu_items = {}
 
-    def remove_menu(self, _, vm_path):
-        ''' Remove the menu item for the specified domain from the tray'''
-        vm = self.domain_manager.children[vm_path]
+        self.register_events()
+        self.set_application_id(app_name)
+        self.register()  # register Gtk Application
+
+    def register_events(self):
+        self.dispatcher.add_handler('domain-pre-start', self.add_domain_item)
+        self.dispatcher.add_handler('domain-start', self.update_domain_item)
+        self.dispatcher.add_handler('domain-start-failed',
+                                    self.remove_domain_item)
+        self.dispatcher.add_handler('domain-stopped', self.update_domain_item)
+        self.dispatcher.add_handler('domain-shutdown', self.remove_domain_item)
+
+        self.dispatcher.add_handler('domain-pre-start', self.emit_notification)
+        self.dispatcher.add_handler('domain-start', self.emit_notification)
+        self.dispatcher.add_handler('domain-start-failed',
+                                    self.emit_notification)
+        self.dispatcher.add_handler('domain-pre-shutdown',
+                                    self.emit_notification)
+        self.dispatcher.add_handler('domain-shutdown', self.emit_notification)
+
+        self.stats_dispatcher.add_handler('vm-stats', self.update_stats)
+
+    def show_menu(self, _, event):
+        self.tray_menu.show_all()
+        self.tray_menu.popup(None,  # parent_menu_shell
+                             None,  # parent_menu_item
+                             None,  # func
+                             None,  # data
+                             event.button,  # button
+                             Gtk.get_current_event_time())  # activate_time
+
+    def emit_notification(self, vm, event, **kwargs):
+        notification = Gio.Notification.new("Qube Status: {}". format(vm.name))
+        notification.set_priority(Gio.NotificationPriority.NORMAL)
+
+        if event == 'domain-start-failed':
+            notification.set_body('Domain {} has failed to start: {}'.format(
+                vm.name, kwargs['reason']))
+            notification.set_priority(Gio.NotificationPriority.HIGH)
+            notification.set_icon(
+                Gio.ThemedIcon.new('dialog-warning'))
+        elif event == 'domain-pre-start':
+            notification.set_body('Domain {} is starting.'.format(vm.name))
+        elif event == 'domain-start':
+            notification.set_body('Domain {} has started.'.format(vm.name))
+        elif event == 'domain-pre-shutdown':
+            notification.set_body('Domain {} is halting.'.format(vm.name))
+        elif event == 'domain-shutdown':
+            notification.set_body('Domain {} has halted.'.format(vm.name))
+        else:
+            return
+        self.send_notification(None, notification)
+
+    def add_domain_item(self, vm, event, **kwargs):
+        # check if it already exists
+        if vm in self.menu_items:
+            return
         domain_item = DomainMenuItem(vm)
-        subprocess.call([
-            'notify-send',
-            "Domain %s is %s" % (vm['name'], str(vm['state']).lower())
-        ])
-
-        vm_widget = self.menu_items[vm_path]
-        self.tray_menu.remove(vm_widget)
-        del self.menu_items[vm_path]
-        self.tray_menu.queue_draw()
-
-    def update_domain_item(self, _, vm_path):
-        ''' Add/Replace the menu item with the started menu for the specified vm in the tray'''
-        if vm_path in self.menu_items:
-            self.remove_menu(None, vm_path)
-
-        vm = self.domain_manager.children[vm_path]
-        domain_item = DomainMenuItem(vm)
-        subprocess.call([
-            'notify-send',
-            "Domain %s is %s" % (vm['name'], str(vm['state']).lower())
-        ])
-
         position = 0
         for i in self.tray_menu:
-            if i.vm['name'] > vm['name']:
+            if i.vm.name > vm.name:
                 break
             position += 1
-
         self.tray_menu.insert(domain_item, position)
-        self.menu_items[vm_path] = domain_item
+        self.menu_items[vm] = domain_item
         self.tray_menu.show_all()
         self.tray_menu.queue_draw()
 
-    def run(self):  # pylint: disable=arguments-differ
-        for signal_name, handler_function in self.signal_callbacks.items():
-            matcher = self.domain_manager.connect_to_signal(
-                signal_name, handler_function)
+    def remove_domain_item(self, vm, event, **kwargs):
+        ''' Remove the menu item for the specified domain from the tray'''
+        vm_widget = self.menu_items[vm]
+        self.tray_menu.remove(vm_widget)
+        del self.menu_items[vm]
+        self.tray_menu.queue_draw()
 
-            if signal_name not in self.signal_matches:
-                self.signal_matches[signal_name] = list()
+    def update_domain_item(self, vm, event, **kwargs):
+        ''' Update the menu item with the started menu for the specified vm in the tray'''
+        if vm not in self.menu_items:
+            self.add_domain_item(vm, None)
+        self.menu_items[vm].update_state(vm.get_power_state())
 
-            self.signal_matches[signal_name] += [matcher]
+    def update_stats(self, vm, event, **kwargs):
+        if vm not in self.menu_items:
+            return
+        self.menu_items[vm].update_stats(kwargs['memory_kb'])
 
-        for vm_path, vm in self.domain_manager.children.items():
-            if vm['name'] == 'dom0' or vm['state'] == 'Halted':
-                continue
-            else:
-                self.update_domain_item(DOMAIN_MANAGER_INTERFACE, vm_path)
-
+    def initialize_menu(self):
+        for vm in self.qapp.domains:
+            if vm.is_running() and vm.klass != 'AdminVM':
+                self.add_domain_item(vm, None)
         self.connect('shutdown', self._disconnect_signals)
-        Gtk.main()
+
+    def run(self):  # pylint: disable=arguments-differ
+        self.initialize_menu()
 
     def _disconnect_signals(self, _):
-        for matchers in self.signal_matches.values():
-            for matcher in matchers:
-                self.domain_manager.disconnect_signal(matcher)
+        self.dispatcher.remove_handler('domain-pre-start', self.add_domain_item)
+        self.dispatcher.remove_handler('domain-start', self.update_domain_item)
+        self.dispatcher.remove_handler('domain-start-failed',
+                                    self.update_domain_item)
+        self.dispatcher.remove_handler('domain-stopped', self.update_domain_item)
+        self.dispatcher.remove_handler('domain-shutdown', self.remove_domain_item)
 
-
-def indicator(tray_menu: Gtk.Menu) -> appindicator.Indicator:
-    '''Helper function to setup the indicator object'''
-    ind = appindicator.Indicator.new(
-        'Qubes Widget', "qubes-logo-icon",
-        appindicator.IndicatorCategory.SYSTEM_SERVICES)
-    ind.set_menu(tray_menu)
-    ind.set_status(appindicator.IndicatorStatus.ACTIVE)
-    return ind
+        self.dispatcher.remove_handler('domain-pre-start', self.emit_notification)
+        self.dispatcher.remove_handler('domain-start', self.emit_notification)
+        self.dispatcher.remove_handler('domain-start-failed',
+                                    self.emit_notification)
+        self.dispatcher.remove_handler('domain-stopped', self.emit_notification)
+        self.dispatcher.remove_handler('domain-shutdown', self.emit_notification)
 
 
 def main():
     ''' main function '''
-    app = DomainTray('org.qubes.ui.tray.Domains')
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
-    return app.run()
+    qapp = qubesadmin.Qubes()
+    dispatcher = qubesadmin.events.EventsDispatcher(qapp)
+    stats_dispatcher = qubesadmin.events.EventsDispatcher(
+        qapp, api_method='admin.vm.Stats')
+    app = DomainTray(
+        'org.qubes.qui.tray.Domains', qapp, dispatcher, stats_dispatcher)
+    app.run()
+
+    loop = asyncio.get_event_loop()
+    tasks = [
+        asyncio.ensure_future(dispatcher.listen_for_events()),
+        asyncio.ensure_future(stats_dispatcher.listen_for_events()),
+    ]
+
+    done, _ = loop.run_until_complete(asyncio.wait(
+            tasks, return_when=asyncio.FIRST_EXCEPTION))
+
+    for d in done:
+        try:
+            d.result()
+        except Exception as ex:
+            exc_type, exc_value = sys.exc_info()[:2]
+            dialog = Gtk.MessageDialog(
+                None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)
+            dialog.set_title("Houston, we have a problem...")
+            dialog.set_markup(
+                "<b>Whoops. A critical error in Domains Widget has occured.</b>"
+                " This is most likely a bug in the widget. To restart the "
+                "widget, run 'qui-domains' in dom0.")
+            dialog.format_secondary_markup(
+                "\n<b>{}</b>: {}\n{}".format(
+                   exc_type.__name__, exc_value, traceback.format_exc(limit=10)
+                ))
+            dialog.run()
 
 
 if __name__ == '__main__':
