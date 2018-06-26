@@ -113,7 +113,7 @@ class RunTerminalItem(Gtk.ImageMenuItem):
         self.connect('activate', self.run_terminal)
 
     def run_terminal(self, _item):
-        self.vm.RunService('qubes.StartApp+qubes-run-terminal')
+        self.vm.run_service('qubes.StartApp+qubes-run-terminal')
 
 
 class StartedMenu(Gtk.Menu):
