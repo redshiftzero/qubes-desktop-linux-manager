@@ -11,6 +11,9 @@ import qubesadmin
 import qubesadmin.events
 
 import dbus.mainloop.glib
+
+from qubesadmin import exc
+
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 import gbulb
@@ -312,6 +315,8 @@ class DomainTray(Gtk.Application):
 
     def remove_domain_item(self, vm, event, **kwargs):
         ''' Remove the menu item for the specified domain from the tray'''
+        if vm not in self.menu_items:
+            return
         vm_widget = self.menu_items[vm]
         self.tray_menu.remove(vm_widget)
         del self.menu_items[vm]
@@ -319,9 +324,12 @@ class DomainTray(Gtk.Application):
 
     def update_domain_item(self, vm, event, **kwargs):
         ''' Update the menu item with the started menu for the specified vm in the tray'''
-        if vm not in self.menu_items:
-            self.add_domain_item(vm, None)
-        self.menu_items[vm].update_state(vm.get_power_state())
+        try:
+            if vm not in self.menu_items:
+                self.add_domain_item(vm, None)
+            self.menu_items[vm].update_state(vm.get_power_state())
+        except exc.QubesPropertyAccessError:
+            self.remove_domain_item(vm, event, **kwargs)
 
     def update_stats(self, vm, event, **kwargs):
         if vm not in self.menu_items:
