@@ -27,7 +27,7 @@ class PoolUsageData:
     def __populate_pools(self):
         for pool in sorted(self.qubes_app.pools.values()):
             self.pools.append(pool)
-            if pool.size is None:
+            if pool.size is None or 'included_in' in pool.config:
                 continue
             self.total_size += pool.size
             self.used_size += pool.usage
