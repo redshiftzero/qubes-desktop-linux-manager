@@ -26,6 +26,46 @@ gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gio, Gtk  # isort:skip
 
 
+class PauseItem(Gtk.ImageMenuItem):
+    ''' Shutdown menu Item. When activated pauses the domain. '''
+
+    def __init__(self, vm):
+        super().__init__()
+        self.vm = vm
+
+        icon = Gtk.IconTheme.get_default().load_icon('media-playback-pause', 16,
+                                                     0)
+        image = Gtk.Image.new_from_pixbuf(icon)
+
+        self.set_image(image)
+        self.set_label('Pause')
+
+        self.connect('activate', self.perform_pause)
+
+    def perform_pause(self, *args, **kwargs):
+        self.vm.pause()
+
+
+class UnpauseItem(Gtk.ImageMenuItem):
+    ''' Unpause menu Item. When activated unpauses the domain. '''
+
+    def __init__(self, vm):
+        super().__init__()
+        self.vm = vm
+
+        icon = Gtk.IconTheme.get_default().load_icon('media-playback-start', 16,
+                                                     0)
+        image = Gtk.Image.new_from_pixbuf(icon)
+
+        self.set_image(image)
+        self.set_label('Unpause')
+
+        self.connect('activate', self.perform_unpause)
+
+    def perform_unpause(self, *args, **kwargs):
+        self.vm.unpause()
+
+
 class ShutdownItem(Gtk.ImageMenuItem):
     ''' Shutdown menu Item. When activated shutdowns the domain. '''
 
@@ -126,13 +166,23 @@ class StartedMenu(Gtk.Menu):
         super().__init__()
         self.vm = vm
 
-        preferences = PreferencesItem(self.vm)
-        shutdown_item = ShutdownItem(self.vm)
-        runterminal_item = RunTerminalItem(self.vm)
+        self.add(PreferencesItem(self.vm))
+        self.add(PauseItem(self.vm))
+        self.add(ShutdownItem(self.vm))
+        self.add(RunTerminalItem(self.vm))
 
-        self.add(preferences)
-        self.add(shutdown_item)
-        self.add(runterminal_item)
+
+class PausedMenu(Gtk.Menu):
+    ''' The sub-menu for a paused domain'''
+
+    def __init__(self, vm):
+        super().__init__()
+        self.vm = vm
+
+        self.add(PreferencesItem(self.vm))
+        self.add(UnpauseItem(self.vm))
+        self.add(KillItem(self.vm))
+        self.add(RunTerminalItem(self.vm))
 
 
 class DebugMenu(Gtk.Menu):
@@ -142,6 +192,8 @@ class DebugMenu(Gtk.Menu):
         super().__init__()
         self.vm = vm
 
+        self.add(PreferencesItem(self.vm))
+
         logs = [
             ("Console Log", "/var/log/xen/console/guest-" + vm.name + ".log"),
             ("QEMU Console Log", "/var/log/xen/console/guest-" + vm.name + "-dm.log"),
@@ -149,14 +201,9 @@ class DebugMenu(Gtk.Menu):
 
         for name, path in logs:
             if os.path.isfile(path):
-                item = LogItem(name, path)
-                self.add(item)
+                self.add(LogItem(name, path))
 
-        kill = KillItem(self.vm)
-        preferences = PreferencesItem(self.vm)
-
-        self.add(preferences)
-        self.add(kill)
+        self.add(KillItem(self.vm))
 
 
 class DomainMenuItem(Gtk.ImageMenuItem):
@@ -174,7 +221,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         hbox.pack_start(self.spinner, False, True, 0)
         self.spinner.start()
 
-        if self.vm.get_power_state() != 'Running':
+        if self.vm.get_power_state() not in ['Running', 'Paused']:
             self.show_spinner()
         else:
             self.hide_spinner()
@@ -193,6 +240,8 @@ class DomainMenuItem(Gtk.ImageMenuItem):
     def _set_submenu(self, state):
         if state == 'Running':
             submenu = StartedMenu(self.vm)
+        elif state == 'Paused':
+            submenu = PausedMenu(self.vm)
         else:
             submenu = DebugMenu(self.vm)
         # This is a workaround for a bug in Gtk which occurs when a
@@ -215,7 +264,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         self.spinner.hide()
 
     def update_state(self, state):
-        if state == "Running":
+        if state in ['Running', 'Paused']:
             self.hide_spinner()
         else:
             self.show_spinner()
@@ -254,6 +303,8 @@ class DomainTray(Gtk.Application):
         self.dispatcher.add_handler('domain-start', self.update_domain_item)
         self.dispatcher.add_handler('domain-start-failed',
                                     self.remove_domain_item)
+        self.dispatcher.add_handler('domain-paused', self.update_domain_item)
+        self.dispatcher.add_handler('domain-unpaused', self.update_domain_item)
         self.dispatcher.add_handler('domain-stopped', self.update_domain_item)
         self.dispatcher.add_handler('domain-shutdown', self.remove_domain_item)
 
