@@ -219,19 +219,13 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
         self.spinner = Gtk.Spinner()
         hbox.pack_start(self.spinner, False, True, 0)
-        self.spinner.start()
-
-        if self.vm.get_power_state() not in ['Running', 'Paused']:
-            self.show_spinner()
-        else:
-            self.hide_spinner()
 
         self.memory = self.decorator.memory()
         hbox.pack_start(self.memory, False, True, 0)
 
         self.add(hbox)
 
-        self._set_submenu(self.vm.get_power_state())
+        self.update_state(self.vm.get_power_state())
         self._set_image()
 
     def _set_image(self):
