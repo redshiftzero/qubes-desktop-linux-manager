@@ -245,6 +245,11 @@ class DomainTray(Gtk.Application):
 
         self.menu_items = {}
 
+        self.unpause_all_action = Gio.SimpleAction.new('do-unpause-all', None)
+        self.unpause_all_action.connect('activate', self.do_unpause_all)
+        self.add_action(self.unpause_all_action)
+        self.pause_notification_out = False
+
         self.register_events()
         self.set_application_id(app_name)
         self.register()  # register Gtk Application
@@ -264,6 +269,12 @@ class DomainTray(Gtk.Application):
         self.dispatcher.add_handler('domain-pre-shutdown',
                                     self.emit_notification)
         self.dispatcher.add_handler('domain-shutdown', self.emit_notification)
+
+        self.dispatcher.add_handler('domain-start', self.check_pause_notify)
+        self.dispatcher.add_handler('domain-paused', self.check_pause_notify)
+        self.dispatcher.add_handler('domain-unpaused', self.check_pause_notify)
+        self.dispatcher.add_handler('domain-stopped', self.check_pause_notify)
+        self.dispatcher.add_handler('domain-shutdown', self.check_pause_notify)
 
         self.stats_dispatcher.add_handler('vm-stats', self.update_stats)
 
@@ -297,6 +308,45 @@ class DomainTray(Gtk.Application):
         else:
             return
         self.send_notification(None, notification)
+
+    def emit_paused_notification(self):
+        if not self.pause_notification_out:
+            notification = Gio.Notification.new("Your VMs have been paused!")
+            notification.set_body("All your VMs are currently paused. If this was an accident, simply click \"Unpause All\" to un-pause them. Otherwise, you can un-pause individual VMs via the Qubes Domains tray menu.")
+            notification.set_icon(
+                Gio.ThemedIcon.new('dialog-warning'))
+            notification.add_button('Unpause All', 'app.do-unpause-all')
+            notification.set_priority(Gio.NotificationPriority.HIGH)
+            self.send_notification('vms-paused', notification)
+            self.pause_notification_out = True
+
+    def withdraw_paused_notification(self):
+        if self.pause_notification_out:
+            self.withdraw_notification('vms-paused')
+            self.pause_notification_out = False
+
+    def do_unpause_all(self, vm, *args, **kwargs):
+        for vm_name in self.menu_items:
+            self.qapp.domains[vm_name].unpause()
+
+    def check_pause_notify(self, vm, event, **kwargs):
+        if self.have_running_and_all_are_paused():
+            self.emit_paused_notification()
+        else:
+            self.withdraw_paused_notification()
+
+    def have_running_and_all_are_paused(self):
+        found_paused = False
+        for vm in self.qapp.domains:
+            if vm.klass != 'AdminVM':
+                if vm.is_running():
+                    if vm.is_paused():
+                        # a running that is paused
+                        found_paused = True
+                    else:
+                        # found running that wasn't paused
+                        return False
+        return found_paused
 
     def add_domain_item(self, vm, event, **kwargs):
         # check if it already exists
