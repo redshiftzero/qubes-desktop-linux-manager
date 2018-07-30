@@ -262,6 +262,9 @@ class DomainMenuItem(Gtk.ImageMenuItem):
             self.hide_spinner()
         else:
             self.show_spinner()
+        colormap = {'Paused': 'grey', 'Crashed': 'red', 'Transient': 'red'}
+        color = colormap[state] if state in colormap else 'black'
+        self.name.set_markup('<span color=\'%s\'>%s</span>' % (color, self.vm.name))
         self._set_submenu(state)
 
     def update_stats(self, memory_kb):
