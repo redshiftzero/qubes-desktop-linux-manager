@@ -66,24 +66,26 @@ class DomainDecorator(PropertiesDecorator):
         return label
 
 
-def device_hbox(dev: Device, attached=False) -> Gtk.Box:
+def device_hbox(device, frontend_domains=None) -> Gtk.Box:
     ''' Returns a :class:`Gtk.Box` containing the device name & icon.. '''
-    if dev['dev_class'] == 'block':
+    if device.devclass == 'block':
         icon = 'drive-removable-media'
-    elif dev['dev_class'] == 'mic':
+    elif device.devclass == 'mic':
         icon = 'audio-input-microphone'
-    elif dev['dev_class'] == 'usb':
+    elif device.devclass == 'usb':
         icon = 'generic-usb'
     else:
         icon = 'emblem-important'
     dev_icon = create_icon(icon)
 
     name_label = Gtk.Label(xalign=0)
-    if attached:
-        name_label.set_markup(
-            '<b>' + dev.name + ' (' + dev.frontend_domain['name'] + ')</b>')
+    name = "{}:{} - {}".format(device.backend_domain.name, device.ident,
+                               device.description)
+    if frontend_domains:
+        name_label.set_markup('<b>{} ({})</b>'.format(
+            name, ", ".join([vm.name for vm in frontend_domains])))
     else:
-        name_label.set_text(dev.name)
+        name_label.set_text(name)
     name_label.set_max_width_chars(64)
     name_label.set_ellipsize(Pango.EllipsizeMode.END)
 
@@ -104,7 +106,7 @@ def device_domain_hbox(vm: Domain, attached: bool) -> Gtk.Box:
         add_icon = create_icon('list-add')
         hbox.pack_start(add_icon, False, False, 5)
 
-    name = Gtk.Label(vm['name'], xalign=0)
+    name = Gtk.Label(vm.name, xalign=0)
     hbox.pack_start(name, True, True, 5)
     return hbox
 

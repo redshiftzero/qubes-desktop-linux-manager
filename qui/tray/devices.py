@@ -1,17 +1,18 @@
 # pylint: disable=missing-docstring
-import signal
+import asyncio
 import subprocess
 import sys
 
 # pylint: disable=wrong-import-position,ungrouped-imports
 import traceback
 
-import dbus
 import dbus.mainloop.glib
-
 from qubesadmin import exc
 
-dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)  # isort:skip
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+import gbulb
+gbulb.install()
 
 import gi
 gi.require_version('Gtk', '3.0')  # isort:skip
@@ -20,60 +21,39 @@ from gi.repository import Gtk  # isort:skip
 from gi.repository import AppIndicator3 as appindicator  # isort:skip
 
 import qubesadmin
+from qubesadmin import events
 
 import qui.decorators
 import qui.models.qubes
 
-DOMAINS = qui.models.qubes.DomainManager()
-LABELS = qui.models.qubes.LabelsManager()
-QUBES_APP = qubesadmin.Qubes()
-
-DBUS = dbus.SessionBus()
-
-# TODO Replace pci with usb & mic when they are ready
 DEV_TYPES = ['block', 'usb', 'mic']
 
 
 class DomainMenuItem(Gtk.ImageMenuItem):
     ''' A submenu item for the device menu. Allows attaching and detaching the device to a domain. '''
 
-    def __init__(self, dev: qui.models.qubes.Device,
-                 dbus_vm: qui.models.qubes.Domain, *args, **kwargs):
+    def __init__(self, device, vm, is_attached, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.dbus_vm = dbus_vm
-        self.vm = QUBES_APP.domains[str(self.dbus_vm['name'])]
+        self.vm = vm
 
-        self.dev = dev
-        if self.dev.frontend_domain is None:
-            self.attached = False
-        elif self.dev.frontend_domain['name'] == self.dbus_vm['name']:
-            self.attached = True
-        else:
-            self.attached = False
+        self.device = device
+        self.attached = is_attached
 
-        icon = LABELS[self.dbus_vm['label']]['icon']
+        icon = self.vm.label.icon  # repair thiissssss
         self.set_image(qui.decorators.create_icon(icon))
-        self._hbox = qui.decorators.device_domain_hbox(self.dbus_vm,
+        self._hbox = qui.decorators.device_domain_hbox(self.vm,
                                                        self.attached)
-        self.dev_class = str(self.dev['dev_class'])
+        self.devclass = str(self.device.devclass)
 
         self.add(self._hbox)
-
-        dev_ident = str(self.dev['ident'])
-
-        backend_vm_name = str(self.dev.backend_domain['name'])
-        backend_vm = QUBES_APP.domains[backend_vm_name]
-
-        self.assignment = qubesadmin.devices.DeviceAssignment(
-            backend_vm, dev_ident, persistent=False)
 
     def attach(self):
         assert not self.attached
         self.attached = True
 
         self.remove(self._hbox)
-        self._hbox = qui.decorators.device_domain_hbox(self.dbus_vm,
+        self._hbox = qui.decorators.device_domain_hbox(self.vm,
                                                        self.attached)
         self.add(self._hbox)
         self.show_all()
@@ -82,74 +62,68 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         assert self.attached
         self.attached = False
         self.remove(self._hbox)
-        self._hbox = qui.decorators.device_domain_hbox(self.dbus_vm,
+        self._hbox = qui.decorators.device_domain_hbox(self.vm,
                                                        self.attached)
         self.add(self._hbox)
         self.show_all()
 
 
 class DomainMenu(Gtk.Menu):
-    def __init__(self, dev: qui.models.qubes.Device, *args, **kwargs):
+    def __init__(self, device, frontend_domains, qapp, dispatcher, *args, **kwargs):
         super(DomainMenu, self).__init__(*args, **kwargs)
-        self.dev = dev
+        self.device = device
         self.menu_items = {}
-        self.attached_item = None
+        self.qapp = qapp
+        self.attached_items = []
+        self.frontend_domains = frontend_domains
+        self.dispatcher = dispatcher
 
-        for vm_obj_path, vm in DOMAINS.children.items():
-            if vm_obj_path != dev['backend_domain']\
-            and vm['state'] == 'Started'\
-            and vm['name'] != 'dom0':
-                self.add_vm(None, vm_obj_path)
+        for vm in self.qapp.domains:
+            if vm != device.backend_domain\
+                    and vm.is_running() and vm.name != 'dom0':
+                self.add_vm(vm)
 
-        DOMAINS.connect_to_signal('Started', self.add_vm)
-        DOMAINS.connect_to_signal('DomainAdded', self.refresh_vm_list)
-        DOMAINS.connect_to_signal('DomainRemoved', self.refresh_vm_list)
-        DOMAINS.connect_to_signal('Halted', self.remove_vm)
-        DOMAINS.connect_to_signal('Failed', self.remove_vm)
-        DOMAINS.connect_to_signal('Unknown', self.remove_vm)
-        self.dev.connect_to_signal('Attached', self.dev_attached)
-        self.dev.connect_to_signal('Detached', self.dev_detached)
+        self.dispatcher.add_handler('domain-start', self.add_vm)
+        self.dispatcher.add_handler('domain-shutdown', self.remove_vm)
 
-    def refresh_vm_list(self, *args, **kwargs):
-        QUBES_APP.domains.refresh_cache(force=True)
-
-    def add_vm(self, _, obj_path):
-        vm = DOMAINS.children[obj_path]
-        menu_item = DomainMenuItem(self.dev, vm)
+    def add_vm(self, vm, _event=None, **_kwargs):
+        menu_item = DomainMenuItem(self.device, vm, vm in self.frontend_domains)
         menu_item.connect('activate', self.toggle)
-        if menu_item.attached:
-            assert self.attached_item is None,\
-                "%s attached to two domains(%s & %s)"\
-                % (self.dev['ident'], self.attached_item.dbus_vm['name'], menu_item.dbus_vm['name'])
-            self.attached_item = menu_item
 
-        self.menu_items[str(obj_path)] = menu_item
+        self.menu_items[vm] = menu_item
+        if vm in self.frontend_domains:
+            self.attached_items.append(menu_item)
 
         # sort function
         position = 0
         for i in self.menu_items:
-            if str(self.menu_items[i].vm) < str(vm["name"]):
+            if str(self.menu_items[i].vm) < str(vm.name):
                 position += 1
 
         self.insert(menu_item, position)
         self.show_all()
         self.queue_draw()
 
-    def remove_vm(self, _, vm_obj_path):
-        menu_item = self.menu_items[vm_obj_path]
+    def remove_vm(self, vm, _event=None, **_kwargs):
+        if vm not in self.menu_items:
+            return
+        menu_item = self.menu_items[vm]
+        if menu_item in self.attached_items:
+            self.attached_items.remove(menu_item)
         self.remove(menu_item)
         self.show_all()
         self.queue_draw()
 
-    def dev_attached(self, vm_obj_path):
-        menu_item = self.menu_items[vm_obj_path]
+    def dev_attached(self, vm):
+        menu_item = self.menu_items[vm]
         menu_item.attach()
-        self.attached_item = menu_item
+        self.attached_items.append(menu_item)
 
-    def dev_detached(self, vm_obj_path):
-        menu_item = self.menu_items[vm_obj_path]
+    def dev_detached(self, vm):
+        menu_item = self.menu_items[vm]
         menu_item.detach()
-        self.attached_item = None
+        if menu_item in self.attached_items:
+            self.attached_items.remove(menu_item)
 
     def toggle(self, menu_item):
         if menu_item.attached:
@@ -158,92 +132,98 @@ class DomainMenu(Gtk.Menu):
             self.attach(menu_item)
 
     def attach(self, menu_item):
-        vm_name = menu_item.vm.name
-
-        if self.attached_item is not None:
+        if self.attached_items is not None:
             self.detach()
 
         try:
-            menu_item.vm.devices[menu_item.dev_class].attach(
-                menu_item.assignment)
+            assignment = qubesadmin.devices.DeviceAssignment(
+                self.device.backend_domain, self.device.ident, persistent=False)
+            menu_item.vm.devices[menu_item.devclass].attach(assignment)
             subprocess.call(
                 ['notify-send',
-                 "Attaching %s to %s" % (self.dev.name, menu_item.vm)])
+                 "Attaching %s to %s" % (self.device.description, menu_item.vm)])
         except exc.QubesException as ex:
             subprocess.call(
                 ['notify-send', '-t', '15000', '-i', 'dialog-error',
                  'Attaching device {0} to {1} failed. Error: {2}'.format(
-                     self.dev.name,
+                     self.device.description,
                      menu_item.vm,
                      ex)])
         except Exception as ex:
             traceback.print_exc(file=sys.stderr)
 
     def detach(self):
-        menu_item = self.attached_item
-        menu_item.vm.devices[menu_item.dev_class].detach(menu_item.assignment)
-        vm_name = menu_item.dbus_vm['name']
-        subprocess.call([
-            'notify-send',
-            "Detaching %s from %s" % (self.dev.name, vm_name)
-        ])
+        for menu_item in self.attached_items:
+            for assignment in menu_item.vm.devices[menu_item.devclass].assignments():
+                menu_item.vm.devices[menu_item.devclass].detach(assignment)
+            # menu_item.vm.devices[menu_item.devclass].detach(menu_item.assignment)
+            # vm_name = menu_item.dbus_vm['name']
+            subprocess.call([
+                'notify-send',
+                "Detaching %s from %s" % (self.device.description, menu_item.vm.name)
+            ])
 
 
 class DeviceItem(Gtk.ImageMenuItem):
     ''' MenuItem showing the device data and a :class:`DomainMenu`. '''
 
-    def __init__(self, dev_obj_path: dbus.ObjectPath,
-                 device_manager, *args, **kwargs):
+    def __init__(self, device, frontend_domains, qapp, dispatcher, *args, **kwargs):
         "docstring"
         super().__init__(*args, **kwargs)
-        self.device_manager = device_manager
 
-        self.dev = \
-            self.device_manager[dev_obj_path]  # type: qui.models.qubes.Device
-        self.dev_class = self.dev["dev_class"]
-        label_path = self.dev.backend_domain['label']  # type: dbus.ObjectPath
-        vm_icon = LABELS[label_path]["icon"]  # type: Gtk.Image
+        self.qapp = qapp
+        self.device = device
+        self.devclass = self.device.devclass
+        self.frontend_domains = frontend_domains
+        self.dispatcher = dispatcher
+        vm_icon = self.device.backend_domain.label.icon
         self.hbox = qui.decorators.device_hbox(
-            self.dev,
-            attached=self.dev.frontend_domain is not None)  # type: Gtk.Box
+            self.device,
+            frontend_domains=self.frontend_domains)  # type: Gtk.Box
 
         self.set_image(qui.decorators.create_icon(vm_icon))
-        self.obj_path = dev_obj_path
         self.add(self.hbox)
-        submenu = DomainMenu(self.dev)
+        submenu = DomainMenu(
+            self.device, self.frontend_domains, qapp, self.dispatcher)
         self.set_submenu(submenu)
 
-        self.dev.connect_to_signal('Attached', self.attach)
-        self.dev.connect_to_signal('Detached', self.detach)
-        DOMAINS.connect_to_signal('Halted', self.vm_shutdown)
-        DOMAINS.connect_to_signal('Failed', self.vm_shutdown)
-        DOMAINS.connect_to_signal('Unknown', self.vm_shutdown)
+        self.dispatcher.add_handler('domain-shutdown',
+                                          self.vm_shutdown)
+        self.dispatcher.add_handler('domain-start-failed',
+                                          self.vm_shutdown)
 
-    def vm_shutdown(self, _, vm_obj_path):
-        if self.dev.frontend_domain == DOMAINS.children[vm_obj_path]:
+    def vm_shutdown(self, vm, _event, **_kwargs):
+        if vm in self.frontend_domains:
             self.detach(None)
 
-    def attach(self, dev_path):
+    def device_attached(self, vm):
+        self.frontend_domains.append(vm)
         self.remove(self.hbox)
-        self.hbox = qui.decorators.device_hbox(self.dev, attached=True)
+        self.hbox = qui.decorators.device_hbox(
+            self.device, frontend_domains=self.frontend_domains)
         self.add(self.hbox)
+        self.get_submenu().dev_attached(vm)
         self.show_all()
 
-    def detach(self, dev_path):
+    def device_detached(self, vm):
+        self.frontend_domains.remove(vm)
         self.remove(self.hbox)
-        self.hbox = qui.decorators.device_hbox(self.dev, attached=False)
+        self.hbox = qui.decorators.device_hbox(
+            self.device, frontend_domains=self.frontend_domains)
         self.add(self.hbox)
+        self.get_submenu().dev_detached(vm)
         self.show_all()
 
 
 class DeviceGroups():
-    def __init__(self, menu: Gtk.Menu, device_manager):
+    def __init__(self, menu: Gtk.Menu, dispatcher, qapp):
         self.positions = {}
         self.separators = {}
         self.counters = {}
         self.menu = menu
-        self.menu_items = []
-        self.device_manager = device_manager
+        self.menu_items = {}
+        self.qapp = qapp
+        self.dispatcher = dispatcher
 
         for pos, dev_type in enumerate(DEV_TYPES):
             self.counters[dev_type] = 0
@@ -256,28 +236,54 @@ class DeviceGroups():
             self.positions[dev_type] = pos
             self.separators[dev_type] = separator
 
-        self.device_manager.connect_to_signal("Added", self.add)
-        self.device_manager.connect_to_signal("Removed", self.remove)
+        for devclass in DEV_TYPES:
+            self.dispatcher.add_handler('device-attach:' + devclass,
+                                              self.device_attached)
+            self.dispatcher.add_handler('device-detach:' + devclass,
+                                              self.device_detached)
+            self.dispatcher.add_handler('device-list-change:' + devclass,
+                                        self.device_change)
 
-    def add(self, dev_obj_path: dbus.ObjectPath):
-        dev = self.device_manager[dev_obj_path]
-        if dev['dev_class'] not in DEV_TYPES:
+    def update_device_list(self):
+        devices = {}
+        for vm in self.qapp.domains:
+            for devclass in DEV_TYPES:
+                for device in vm.devices[devclass]:
+                    devices[device] = []
+
+        for vm in self.qapp.domains:
+            for devclass in DEV_TYPES:
+                for device in vm.devices[devclass].attached():
+                    devices[device].append(vm)
+
+        for device in [dev for dev in devices if dev not in self.menu_items.keys()]:
+            self.add(device, devices[device])
+
+        for device in [dev for dev in self.menu_items.keys() if dev not in devices]:
+            self.remove(device)
+
+    def device_change(self, _vm, _event, **_kwargs):
+        self.update_device_list()
+
+    def add(self, device, frontend_domains):
+        if device.devclass not in DEV_TYPES:
             return
 
-        position = self._position(dev['dev_class'])
+        position = self._position(device.devclass)
 
         #sort function
-        name = dev.backend_domain['name'] + ':' + dev['ident']
-        for i in self.menu_items:
-            if str(dev['dev_class']) == str(i.dev['dev_class']):
-                if str(i.dev.backend_domain['name'] + ':' + i.dev['ident']) <= str(name):
+        name = device.backend_domain.name + ':' + device.ident
+        for item in self.menu.get_children(): ### TODO - improve sorting
+            if getattr(item, 'device', None) and \
+                    str(device.devclass) == str(item.device.devclass):
+                if str(item.device.backend_domain.name + ':' + item.device.ident) <= str(name):
                     position += 1
-        self._insert(dev_obj_path, position)
+        self._insert(device, frontend_domains, position)
 
-        if dev['dev_class'] not in [DEV_TYPES[0], DEV_TYPES[-1]]:
-            self.separators[dev['dev_class']].show()
+        if device.devclass not in [DEV_TYPES[0], DEV_TYPES[-1]]:
+            self.separators[device.devclass].show()
 
-        subprocess.call(['notify-send', "Device %s is available" % (dev.name)])
+        subprocess.call(['notify-send', "Device %s is available" % (device.description)])
 
     def _position(self, dev_type):
         if dev_type == DEV_TYPES[0]:
@@ -285,27 +291,27 @@ class DeviceGroups():
         else:
             return self.positions[dev_type] - self.counters[dev_type] + 1
 
-    def _insert(self, dev_obj_path: dbus.ObjectPath, position: int) -> None:
-        dev = self.device_manager[dev_obj_path]
-        menu_item = DeviceItem(dev_obj_path, self.device_manager)
+    def _insert(self, device, frontend_domains, position: int) -> None:
+        menu_item = DeviceItem(device, frontend_domains, self.qapp,
+                               self.dispatcher)
         self.menu.insert(menu_item, position)
-        self.counters[dev["dev_class"]] += 1
-        self.menu_items.append(menu_item)
-        self._shift_positions(dev["dev_class"])
+        self.counters[device.devclass] += 1
+        self.menu_items[device] = menu_item
+        self._shift_positions(device.devclass)
         self._recalc_separators()
         menu_item.show_all()
 
-    def remove(self, dev_obj_path: dbus.ObjectPath):
-        for item in self.menu_items:
-            if item.obj_path == dev_obj_path:
+    def remove(self, device):
+        for item in self.menu.get_children():
+            if getattr(item, 'device', None) == device:
                 self.menu.remove(item)
-                self.menu_items.remove(item)
-                self.counters[item.dev_class] -= 1
-                self._unshift_positions(item.dev_class)
+                self.menu_items.pop(device)
+                self.counters[item.devclass] -= 1
+                self._unshift_positions(item.devclass)
                 self._recalc_separators()
                 subprocess.call(
                     ['notify-send',
-                     "Device %s is removed" % (item.dev.name)])
+                     "Device %s is removed" % item.device.description])
                 return
 
     def _recalc_separators(self):
@@ -335,14 +341,26 @@ class DeviceGroups():
             assert self.positions[index] > 0
             self.positions[index] -= 1
 
+    def device_attached(self, vm, _event, device, **_kwargs):
+        for item in self.menu.get_children():
+            if getattr(item, 'device', None) == device or str(getattr(item, 'device', None)) == str(device):
+                item.device_attached(vm)
+
+    def device_detached(self, vm, _event, device, **_kwargs):
+        for item in self.menu.get_children():
+            if getattr(item, 'device', None) == device or str(getattr(item, 'device', None)) == str(device):
+                item.device_detached(vm)
+
 
 class DevicesTray(Gtk.Application):
-    def __init__(self, app_name='Devices Tray'):
+    def __init__(self, app_name, qapp, dispatcher):
         super(DevicesTray, self).__init__()
         self.name = app_name
         self.tray_menu = Gtk.Menu()
-        self.device_manager = qui.models.qubes.DevicesManager()
-        self.devices = DeviceGroups(self.tray_menu, self.device_manager)
+
+        self.dispatcher = dispatcher
+        self.qapp = qapp
+        self.devices = DeviceGroups(self.tray_menu, self.dispatcher, self.qapp)
 
         self.ind = appindicator.Indicator.new(
             'Devices Widget', "media-removable",
@@ -351,18 +369,43 @@ class DevicesTray(Gtk.Application):
         self.ind.set_menu(self.tray_menu)
 
     def run(self):  # pylint: disable=arguments-differ
-        for obj_path in self.device_manager.children:
-            self.devices.add(obj_path)
+        self.devices.update_device_list()
 
         self.tray_menu.show_all()
 
-        Gtk.main()
-
 
 def main():
-    app = DevicesTray()
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    qapp = qubesadmin.Qubes()
+    dispatcher = qubesadmin.events.EventsDispatcher(qapp)
+    app = DevicesTray(
+        'org.qubes.qui.tray.Domains', qapp, dispatcher)
     app.run()
+
+    loop = asyncio.get_event_loop()
+
+    done, _ = loop.run_until_complete(asyncio.ensure_future(
+        dispatcher.listen_for_events()))
+
+    for d in done:
+        try:
+            d.result()
+        except Exception as ex:
+            exc_type, exc_value = sys.exc_info()[:2]
+            dialog = Gtk.MessageDialog(
+                None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)
+            dialog.set_title("Houston, we have a problem...")
+            dialog.set_markup(
+                "<b>Whoops. A critical error in Domains Widget has occured.</b>"
+                " This is most likely a bug in the widget. To restart the "
+                "widget, run 'qui-domains' in dom0.")
+            dialog.format_secondary_markup(
+                "\n<b>{}</b>: {}\n{}".format(
+                   exc_type.__name__, exc_value, traceback.format_exc(limit=10)
+                ))
+            dialog.run()
+    # app = DevicesTray()
+    # signal.signal(signal.SIGINT, signal.SIG_DFL)
+    # app.run()
 
 
 if __name__ == '__main__':
