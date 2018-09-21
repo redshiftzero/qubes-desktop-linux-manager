@@ -238,9 +238,9 @@ class DeviceGroups():
 
         for devclass in DEV_TYPES:
             self.dispatcher.add_handler('device-attach:' + devclass,
-                                              self.device_attached)
+                                        self.device_attached)
             self.dispatcher.add_handler('device-detach:' + devclass,
-                                              self.device_detached)
+                                        self.device_detached)
             self.dispatcher.add_handler('device-list-change:' + devclass,
                                         self.device_change)
 
@@ -269,15 +269,14 @@ class DeviceGroups():
         if device.devclass not in DEV_TYPES:
             return
 
+        name = device.backend_domain.name + ':' + device.ident
         position = self._position(device.devclass)
 
-        #sort function
-        name = device.backend_domain.name + ':' + device.ident
-        for item in self.menu.get_children(): ### TODO - improve sorting
-            if getattr(item, 'device', None) and \
-                    str(device.devclass) == str(item.device.devclass):
-                if str(item.device.backend_domain.name + ':' + item.device.ident) <= str(name):
-                    position += 1
+        position += len(
+            [dev for dev in self.menu_items.keys()
+             if dev.devclass == device.devclass
+             and (dev.backend_domain.name + ':' + dev.ident) < name])
+
         self._insert(device, frontend_domains, position)
 
         if device.devclass not in [DEV_TYPES[0], DEV_TYPES[-1]]:
