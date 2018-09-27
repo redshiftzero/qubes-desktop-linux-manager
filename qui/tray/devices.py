@@ -405,9 +405,6 @@ def main():
                    exc_type.__name__, exc_value, traceback.format_exc(limit=10)
                 ))
             dialog.run()
-    # app = DevicesTray()
-    # signal.signal(signal.SIGINT, signal.SIG_DFL)
-    # app.run()
 
 
 if __name__ == '__main__':

@@ -9,7 +9,6 @@ gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gtk, Pango  # isort:skip
 
 import qubesadmin
-from qui.models.qubes import Device, Domain
 
 
 class PropertiesDecorator():
@@ -94,7 +93,7 @@ def device_hbox(device, frontend_domains=None) -> Gtk.Box:
     hbox.pack_start(dev_icon, False, True, 0)
     return hbox
 
-def device_domain_hbox(vm: Domain, attached: bool) -> Gtk.Box:
+def device_domain_hbox(vm, attached: bool) -> Gtk.Box:
     hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 
     # hbox.pack_start(label, True, True, 5)
