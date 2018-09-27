@@ -254,7 +254,10 @@ class DeviceGroups():
         for vm in self.qapp.domains:
             for devclass in DEV_TYPES:
                 for device in vm.devices[devclass].attached():
-                    devices[device].append(vm)
+                    if device in devices:
+                        # occassionally ghost UnknownDevices appear when a
+                        # device was removed but not detached from a VM
+                        devices[device].append(vm)
 
         for device in [dev for dev in devices if dev not in self.menu_items.keys()]:
             self.add(device, devices[device])
