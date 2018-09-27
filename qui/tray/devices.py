@@ -6,10 +6,7 @@ import sys
 # pylint: disable=wrong-import-position,ungrouped-imports
 import traceback
 
-import dbus.mainloop.glib
 from qubesadmin import exc
-
-dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 import gbulb
 gbulb.install()
@@ -24,7 +21,6 @@ import qubesadmin
 from qubesadmin import events
 
 import qui.decorators
-import qui.models.qubes
 
 DEV_TYPES = ['block', 'usb', 'mic']
 

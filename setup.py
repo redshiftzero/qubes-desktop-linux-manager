@@ -10,7 +10,7 @@ setup(name='qui',
       description='Qubes User Interface Package',
       license='GPL2+',
       url='https://www.qubes-os.org/',
-      packages=("qui", "qui.tray", "qui.models"),
+      packages=("qui", "qui.tray"),
       entry_points={
           'gui_scripts': [
               'qui-ls = qui.domains_table:main',

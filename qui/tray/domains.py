@@ -10,11 +10,7 @@ import traceback
 import qubesadmin
 import qubesadmin.events
 
-import dbus.mainloop.glib
-
 from qubesadmin import exc
-
-dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 import gbulb
 gbulb.install()
