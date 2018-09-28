@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- encoding: utf8 -*-
 ''' This is the graphical equivalent of `qvm-ls(1)` based on `Gtk.TreeView`'''
+# pylint: disable=wrong-import-position,import-error
 
 from __future__ import print_function
 
@@ -12,8 +13,6 @@ import qubesadmin.tools.qvm_ls
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gio, Gtk  # isort:skip pylint: disable=C0413
-
-# pylint:disable=missing-docstring
 
 
 class DomainsListStore(Gtk.ListStore):
@@ -57,16 +56,17 @@ class ListBoxWindow(Gtk.Window):
         self.add(self.treeview)
         self.show_all()
 
-    def reload(self):
+    @staticmethod
+    def reload():
         print("drin")
 
 
-def main(args=None):  # pylint:disable=unused-argument
+def main(_args=None):
     parser = qubesadmin.tools.qvm_ls.get_parser()
     try:
         args = parser.parse_args()
     except qubesadmin.exc.QubesException as e:
-        parser.print_error(e.message)
+        parser.print_error(str(e))
         return 1
     window = ListBoxWindow(args)
     window.connect("delete-event", Gtk.main_quit)

@@ -20,7 +20,10 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-''' Sends notifications via D-Bus when something is Copy-Pasted via Qubes RPC '''
+# pylint: disable=import-error
+
+''' Sends notifications via D-Bus when something
+ is Copy-Pasted via Qubes RPC '''
 
 import asyncio
 import math
@@ -34,6 +37,8 @@ import pyinotify
 
 gbulb.install()
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+# pylint: disable=invalid-name
 
 
 class EventHandler(pyinotify.ProcessEvent):
@@ -50,8 +55,9 @@ class EventHandler(pyinotify.ProcessEvent):
         self._copy()
         self.loop = loop if loop else asyncio.get_event_loop()
 
-    def _copy(self, vmname: str=None):
-        ''' Sends Copy notification via the D-Bus `org.freedesktop.Notifications` interface.
+    def _copy(self, vmname: str = None):
+        ''' Sends Copy notification via the
+        D-Bus `org.freedesktop.Notifications` interface.
         '''
         if vmname is None:
             with open(FROM, 'r') as vm_from_file:
@@ -67,7 +73,8 @@ class EventHandler(pyinotify.ProcessEvent):
         self._notify(body)
 
     def _paste(self):
-        ''' Sends Paste notification via the D-Bus `org.freedesktop.Notifications` interface.
+        ''' Sends Paste notification via
+        the D-Bus `org.freedesktop.Notifications` interface.
         '''
         body = "Qubes Clipboard has been copied to the VM and wiped.<i/>\n" \
                 "<small>Trigger a paste operation (e.g. Ctrl-v) to insert " \
@@ -118,7 +125,6 @@ def clipboard_formatted_size() -> str:
                                          file_size / (2.0**(10 * magnitude)),
                                          units[magnitude])
         return '%s' % (formatted_bytes)
-
 
 
 DATA = "/var/run/qubes/qubes-clipboard.bin"

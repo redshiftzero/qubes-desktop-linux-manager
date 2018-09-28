@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# pylint: disable=wrong-import-position,import-error
 ''' A menu listing domains '''
 import asyncio
 import subprocess
@@ -12,14 +13,14 @@ import qubesadmin.events
 
 from qubesadmin import exc
 
-import gbulb
-gbulb.install()
-
-# pylint: disable=wrong-import-position
 import qui.decorators
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gio, Gtk  # isort:skip
+
+import gbulb
+gbulb.install()
+
 
 
 class PauseItem(Gtk.ImageMenuItem):
@@ -38,7 +39,7 @@ class PauseItem(Gtk.ImageMenuItem):
 
         self.connect('activate', self.perform_pause)
 
-    def perform_pause(self, *args, **kwargs):
+    def perform_pause(self, *_args, **_kwargs):
         self.vm.pause()
 
 
@@ -58,7 +59,7 @@ class UnpauseItem(Gtk.ImageMenuItem):
 
         self.connect('activate', self.perform_unpause)
 
-    def perform_unpause(self, *args, **kwargs):
+    def perform_unpause(self, *_args, **_kwargs):
         self.vm.unpause()
 
 
@@ -78,7 +79,7 @@ class ShutdownItem(Gtk.ImageMenuItem):
 
         self.connect('activate', self.perform_shutdown)
 
-    def perform_shutdown(self, *args, **kwargs):
+    def perform_shutdown(self, *_args, **_kwargs):
         self.vm.shutdown()
 
 
@@ -97,7 +98,7 @@ class KillItem(Gtk.ImageMenuItem):
 
         self.connect('activate', self.perform_kill)
 
-    def perform_kill(self, *args, **kwargs):
+    def perform_kill(self, *_args, **_kwargs):
         self.vm.kill()
 
 
@@ -133,7 +134,7 @@ class LogItem(Gtk.ImageMenuItem):
 
         self.connect('activate', self.launch_log_viewer)
 
-    def launch_log_viewer(self, *args, **kwargs):
+    def launch_log_viewer(self, *_args, **_kwargs):
         subprocess.Popen(['qubes-log-viewer', self.path])
 
 
@@ -192,7 +193,8 @@ class DebugMenu(Gtk.Menu):
 
         logs = [
             ("Console Log", "/var/log/xen/console/guest-" + vm.name + ".log"),
-            ("QEMU Console Log", "/var/log/xen/console/guest-" + vm.name + "-dm.log"),
+            ("QEMU Console Log",
+             "/var/log/xen/console/guest-" + vm.name + "-dm.log"),
             ]
 
         for name, path in logs:
@@ -359,7 +361,11 @@ class DomainTray(Gtk.Application):
     def emit_paused_notification(self):
         if not self.pause_notification_out:
             notification = Gio.Notification.new("Your VMs have been paused!")
-            notification.set_body("All your VMs are currently paused. If this was an accident, simply click \"Unpause All\" to un-pause them. Otherwise, you can un-pause individual VMs via the Qubes Domains tray menu.")
+            notification.set_body(
+                "All your VMs are currently paused. If this was an accident, "
+                "simply click \"Unpause All\" to un-pause them. Otherwise, "
+                "you can un-pause individual VMs via the Qubes Domains "
+                "tray menu.")
             notification.set_icon(
                 Gio.ThemedIcon.new('dialog-warning'))
             notification.add_button('Unpause All', 'app.do-unpause-all')
@@ -372,11 +378,11 @@ class DomainTray(Gtk.Application):
             self.withdraw_notification('vms-paused')
             self.pause_notification_out = False
 
-    def do_unpause_all(self, vm, *args, **kwargs):
+    def do_unpause_all(self, _vm, *_args, **_kwargs):
         for vm_name in self.menu_items:
             self.qapp.domains[vm_name].unpause()
 
-    def check_pause_notify(self, vm, event, **kwargs):
+    def check_pause_notify(self, _vm, _event, **_kwargs):
         if self.have_running_and_all_are_paused():
             self.emit_paused_notification()
         else:
@@ -395,13 +401,13 @@ class DomainTray(Gtk.Application):
                         return False
         return found_paused
 
-    def add_domain_item(self, vm, event, **kwargs):
+    def add_domain_item(self, vm, _event, **_kwargs):
         # check if it already exists
         if vm in self.menu_items:
             return
         domain_item = DomainMenuItem(vm)
         position = 0
-        for i in self.tray_menu:
+        for i in self.tray_menu:  # pylint: disable=not-an-iterable
             if i.vm.name > vm.name:
                 break
             position += 1
@@ -410,7 +416,7 @@ class DomainTray(Gtk.Application):
         self.tray_menu.show_all()
         self.tray_menu.queue_draw()
 
-    def remove_domain_item(self, vm, event, **kwargs):
+    def remove_domain_item(self, vm, _event, **_kwargs):
         ''' Remove the menu item for the specified domain from the tray'''
         if vm not in self.menu_items:
             return
@@ -420,7 +426,8 @@ class DomainTray(Gtk.Application):
         self.tray_menu.queue_draw()
 
     def update_domain_item(self, vm, event, **kwargs):
-        ''' Update the menu item with the started menu for the specified vm in the tray'''
+        ''' Update the menu item with the started menu for
+        the specified vm in the tray'''
         try:
             if vm not in self.menu_items:
                 self.add_domain_item(vm, None)
@@ -428,7 +435,7 @@ class DomainTray(Gtk.Application):
         except exc.QubesPropertyAccessError:
             self.remove_domain_item(vm, event, **kwargs)
 
-    def update_stats(self, vm, event, **kwargs):
+    def update_stats(self, vm, _event, **kwargs):
         if vm not in self.menu_items:
             return
         self.menu_items[vm].update_stats(kwargs['memory_kb'])
@@ -446,16 +453,20 @@ class DomainTray(Gtk.Application):
         self.dispatcher.remove_handler('domain-pre-start', self.add_domain_item)
         self.dispatcher.remove_handler('domain-start', self.update_domain_item)
         self.dispatcher.remove_handler('domain-start-failed',
-                                    self.update_domain_item)
-        self.dispatcher.remove_handler('domain-stopped', self.update_domain_item)
-        self.dispatcher.remove_handler('domain-shutdown', self.remove_domain_item)
+                                       self.update_domain_item)
+        self.dispatcher.remove_handler('domain-stopped',
+                                       self.update_domain_item)
+        self.dispatcher.remove_handler('domain-shutdown',
+                                       self.remove_domain_item)
 
-        self.dispatcher.remove_handler('domain-pre-start', self.emit_notification)
+        self.dispatcher.remove_handler('domain-pre-start',
+                                       self.emit_notification)
         self.dispatcher.remove_handler('domain-start', self.emit_notification)
         self.dispatcher.remove_handler('domain-start-failed',
-                                    self.emit_notification)
+                                       self.emit_notification)
         self.dispatcher.remove_handler('domain-stopped', self.emit_notification)
-        self.dispatcher.remove_handler('domain-shutdown', self.emit_notification)
+        self.dispatcher.remove_handler('domain-shutdown',
+                                       self.emit_notification)
 
 
 def main():
@@ -477,10 +488,10 @@ def main():
     done, _ = loop.run_until_complete(asyncio.wait(
             tasks, return_when=asyncio.FIRST_EXCEPTION))
 
-    for d in done:
+    for d in done:  # pylint: disable=invalid-name
         try:
             d.result()
-        except Exception as ex:
+        except Exception as _ex:  # pylint: disable=broad-except
             exc_type, exc_value = sys.exc_info()[:2]
             dialog = Gtk.MessageDialog(
                 None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)

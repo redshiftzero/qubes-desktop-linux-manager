@@ -2,13 +2,13 @@
 ''' Decorators wrap a `qui.models.PropertiesModel` in a class
 containing helpful representation methods.
 '''
+# pylint: disable=wrong-import-position,import-error
 
+import qubesadmin
 import gi  # isort:skip
-import dbus
 gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gtk, Pango  # isort:skip
 
-import qubesadmin
 
 
 class PropertiesDecorator():
@@ -31,7 +31,6 @@ class PropertiesDecorator():
 class DomainDecorator(PropertiesDecorator):
     ''' Useful methods for domain data representation '''
 
-    # pylint: disable=missing-docstring
     def __init__(self, vm: qubesadmin.vm.QubesVM, margins=(5, 5)) -> None:
         super(DomainDecorator, self).__init__(vm, margins)
         self.vm = vm
@@ -50,7 +49,8 @@ class DomainDecorator(PropertiesDecorator):
 
     def icon(self) -> Gtk.Image:
         ''' Returns a `Gtk.Image` containing the colored lock icon '''
-        icon_vm = Gtk.IconTheme.get_default().load_icon(self.vm.label.icon, 16, 0)
+        icon_vm = Gtk.IconTheme.get_default().load_icon(
+            self.vm.label.icon, 16, 0)
         icon_img = Gtk.Image.new_from_pixbuf(icon_vm)
         return icon_img
 
@@ -93,6 +93,7 @@ def device_hbox(device, frontend_domains=None) -> Gtk.Box:
     hbox.pack_start(dev_icon, False, True, 0)
     return hbox
 
+
 def device_domain_hbox(vm, attached: bool) -> Gtk.Box:
     hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 
@@ -110,7 +111,7 @@ def device_domain_hbox(vm, attached: bool) -> Gtk.Box:
     return hbox
 
 
-def create_icon(name: dbus.String) -> Gtk.Image:
+def create_icon(name) -> Gtk.Image:
     ''' Create an icon from string '''
     icon_dev = Gtk.IconTheme.get_default().load_icon(name, 16, 0)
     return Gtk.Image.new_from_pixbuf(icon_dev)

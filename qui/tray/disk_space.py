@@ -1,10 +1,8 @@
-# pylint: disable=missing-docstring
+# pylint: disable=wrong-import-position,import-error
 import sys
-
 import gi
 gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gtk, GObject  # isort:skip
-
 from qubesadmin import Qubes
 from qubesadmin.utils import size_to_human
 
@@ -46,7 +44,8 @@ class PoolUsageData:
     def get_usage(self):
         return self.used_size/self.total_size
 
-    def __create_box(self, pool):
+    @staticmethod
+    def __create_box(pool):
         pool_name = Gtk.Label(xalign=0)
         percentage_use = Gtk.Label()
         numeric_use = Gtk.Label()
@@ -151,7 +150,8 @@ class DiskSpace(Gtk.Application):
                    event.button,  # button
                    Gtk.get_current_event_time())  # activate_time
 
-    def make_top_box(self, pool_data):
+    @staticmethod
+    def make_top_box(pool_data):
         grid = Gtk.Grid()
 
         name_label = Gtk.Label(xalign=0)

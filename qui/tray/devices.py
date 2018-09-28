@@ -1,15 +1,9 @@
-# pylint: disable=missing-docstring
+# pylint: disable=wrong-import-position,import-error
 import asyncio
 import subprocess
 import sys
 
-# pylint: disable=wrong-import-position,ungrouped-imports
 import traceback
-
-from qubesadmin import exc
-
-import gbulb
-gbulb.install()
 
 import gi
 gi.require_version('Gtk', '3.0')  # isort:skip
@@ -18,15 +12,19 @@ from gi.repository import Gtk  # isort:skip
 from gi.repository import AppIndicator3 as appindicator  # isort:skip
 
 import qubesadmin
-from qubesadmin import events
-
+from qubesadmin import exc
 import qui.decorators
+
+import gbulb
+gbulb.install()
+
 
 DEV_TYPES = ['block', 'usb', 'mic']
 
 
 class DomainMenuItem(Gtk.ImageMenuItem):
-    ''' A submenu item for the device menu. Allows attaching and detaching the device to a domain. '''
+    ''' A submenu item for the device menu. Allows attaching and
+    detaching the device to a domain. '''
 
     def __init__(self, device, vm, attached, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -65,7 +63,8 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
 
 class DomainMenu(Gtk.Menu):
-    def __init__(self, device, frontend_domains, qapp, dispatcher, *args, **kwargs):
+    def __init__(self, device, frontend_domains, qapp,
+                 dispatcher, *args, **kwargs):
         super(DomainMenu, self).__init__(*args, **kwargs)
         self.device = device
         self.menu_items = {}
@@ -123,12 +122,12 @@ class DomainMenu(Gtk.Menu):
 
     def toggle(self, menu_item):
         if menu_item.attached:
-            self.detach()
+            self.detach_item()
         else:
-            self.attach(menu_item)
+            self.attach_item(menu_item)
 
-    def attach(self, menu_item):
-        self.detach()
+    def attach_item(self, menu_item):
+        self.detach_item()
 
         try:
             assignment = qubesadmin.devices.DeviceAssignment(
@@ -136,7 +135,8 @@ class DomainMenu(Gtk.Menu):
             menu_item.vm.devices[menu_item.devclass].attach(assignment)
             subprocess.call(
                 ['notify-send',
-                 "Attaching %s to %s" % (self.device.description, menu_item.vm)])
+                 "Attaching %s to %s" % (
+                     self.device.description, menu_item.vm)])
         except exc.QubesException as ex:
             subprocess.call(
                 ['notify-send', '-t', '15000', '-i', 'dialog-error',
@@ -144,24 +144,27 @@ class DomainMenu(Gtk.Menu):
                      self.device.description,
                      menu_item.vm,
                      ex)])
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             traceback.print_exc(file=sys.stderr)
 
-    def detach(self):
+    def detach_item(self):
         for menu_item in self.attached_items:
-            for assignment in menu_item.vm.devices[menu_item.devclass].assignments():
+            for assignment\
+                    in menu_item.vm.devices[menu_item.devclass].assignments():
                 if assignment.device == self.device:
                     menu_item.vm.devices[menu_item.devclass].detach(assignment)
             subprocess.call([
                 'notify-send',
-                "Detaching %s from %s" % (self.device.description, menu_item.vm.name)
+                "Detaching %s from %s" % (self.device.description,
+                                          menu_item.vm.name)
             ])
 
 
 class DeviceItem(Gtk.ImageMenuItem):
     ''' MenuItem showing the device data and a :class:`DomainMenu`. '''
 
-    def __init__(self, device, frontend_domains, qapp, dispatcher, *args, **kwargs):
+    def __init__(self, device, frontend_domains, qapp,
+                 dispatcher, *args, **kwargs):
         "docstring"
         super().__init__(*args, **kwargs)
 
@@ -239,7 +242,7 @@ class DeviceGroups():
     def update_device_list(self, vm=None):
         devices = {}
 
-        for domain in (self.qapp.domains if not vm else [vm]):
+        for domain in self.qapp.domains if not vm else [vm]:
             for devclass in DEV_TYPES:
                 for device in domain.devices[devclass]:
                     devices[device] = []
@@ -252,10 +255,13 @@ class DeviceGroups():
                         # device was removed but not detached from a VM
                         devices[device].append(domain)
 
-        for device in [dev for dev in devices if dev not in self.menu_items.keys()]:
+        for device in [dev for dev in devices
+                       if dev not in self.menu_items]:
             self.add(device, devices[device])
 
-        for device in [dev for dev in self.menu_items.keys() if dev not in devices and (dev.backend_domain == vm or vm is None)]:
+        for device in [dev for dev in self.menu_items
+                       if dev not in devices and
+                          (dev.backend_domain == vm or vm is None)]:
             self.remove(device)
 
     def device_change(self, vm, _event, **_kwargs):
@@ -275,13 +281,13 @@ class DeviceGroups():
         if device.devclass != DEV_TYPES[0]:
             self.separators[device.devclass].show()
 
-        subprocess.call(['notify-send', "Device %s is available" % (device.description)])
+        subprocess.call(
+            ['notify-send', "Device %s is available" % device.description])
 
     def _position(self, dev_type):
         if dev_type == DEV_TYPES[0]:
             return 0
-        else:
-            return self.positions[dev_type] - self.counters[dev_type] + 1
+        return self.positions[dev_type] - self.counters[dev_type] + 1
 
     def _insert(self, device, frontend_domains, position: int) -> None:
         menu_item = DeviceItem(device, frontend_domains, self.qapp,
@@ -335,12 +341,14 @@ class DeviceGroups():
 
     def device_attached(self, vm, _event, device, **_kwargs):
         for item in self.menu.get_children():
-            if getattr(item, 'device', None) == device or str(getattr(item, 'device', None)) == str(device):
+            if getattr(item, 'device', None) == device \
+                    or str(getattr(item, 'device', None)) == str(device):
                 item.device_attached(vm)
 
     def device_detached(self, vm, _event, device, **_kwargs):
         for item in self.menu.get_children():
-            if getattr(item, 'device', None) == device or str(getattr(item, 'device', None)) == str(device):
+            if getattr(item, 'device', None) == device \
+                    or str(getattr(item, 'device', None)) == str(device):
                 item.device_detached(vm)
 
 
@@ -378,10 +386,10 @@ def main():
     done, _ = loop.run_until_complete(asyncio.ensure_future(
         dispatcher.listen_for_events()))
 
-    for d in done:
+    for d in done:  # pylint: disable=invalid-name
         try:
             d.result()
-        except Exception as ex:
+        except Exception as _ex:  # pylint: disable=broad-except
             exc_type, exc_value = sys.exc_info()[:2]
             dialog = Gtk.MessageDialog(
                 None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)
