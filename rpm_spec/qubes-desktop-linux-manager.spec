@@ -47,6 +47,7 @@ BuildArch: noarch
 BuildRequires:  python3-devel
 
 Requires:  python3-setuptools
+Requires:  python3-dbus
 Requires:  python3-gbulb
 Requires:  libappindicator-gtk3
 Requires:  python3-systemd

@@ -28,15 +28,15 @@ DEV_TYPES = ['block', 'usb', 'mic']
 class DomainMenuItem(Gtk.ImageMenuItem):
     ''' A submenu item for the device menu. Allows attaching and detaching the device to a domain. '''
 
-    def __init__(self, device, vm, is_attached, *args, **kwargs):
+    def __init__(self, device, vm, attached, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.vm = vm
 
         self.device = device
-        self.attached = is_attached
+        self.attached = attached
 
-        icon = self.vm.label.icon  # repair thiissssss
+        icon = self.vm.label.icon
         self.set_image(qui.decorators.create_icon(icon))
         self._hbox = qui.decorators.device_domain_hbox(self.vm,
                                                        self.attached)
@@ -128,8 +128,7 @@ class DomainMenu(Gtk.Menu):
             self.attach(menu_item)
 
     def attach(self, menu_item):
-        if self.attached_items is not None:
-            self.detach()
+        self.detach()
 
         try:
             assignment = qubesadmin.devices.DeviceAssignment(
@@ -151,9 +150,8 @@ class DomainMenu(Gtk.Menu):
     def detach(self):
         for menu_item in self.attached_items:
             for assignment in menu_item.vm.devices[menu_item.devclass].assignments():
-                menu_item.vm.devices[menu_item.devclass].detach(assignment)
-            # menu_item.vm.devices[menu_item.devclass].detach(menu_item.assignment)
-            # vm_name = menu_item.dbus_vm['name']
+                if assignment.device == self.device:
+                    menu_item.vm.devices[menu_item.devclass].detach(assignment)
             subprocess.call([
                 'notify-send',
                 "Detaching %s from %s" % (self.device.description, menu_item.vm.name)
@@ -184,13 +182,13 @@ class DeviceItem(Gtk.ImageMenuItem):
         self.set_submenu(submenu)
 
         self.dispatcher.add_handler('domain-shutdown',
-                                          self.vm_shutdown)
+                                    self.vm_shutdown)
         self.dispatcher.add_handler('domain-start-failed',
-                                          self.vm_shutdown)
+                                    self.vm_shutdown)
 
     def vm_shutdown(self, vm, _event, **_kwargs):
         if vm in self.frontend_domains:
-            self.detach(None)
+            self.device_detached(vm)
 
     def device_attached(self, vm):
         self.frontend_domains.append(vm)
@@ -202,7 +200,8 @@ class DeviceItem(Gtk.ImageMenuItem):
         self.show_all()
 
     def device_detached(self, vm):
-        self.frontend_domains.remove(vm)
+        if vm:
+            self.frontend_domains.remove(vm)
         self.remove(self.hbox)
         self.hbox = qui.decorators.device_hbox(
             self.device, frontend_domains=self.frontend_domains)
@@ -223,11 +222,8 @@ class DeviceGroups():
 
         for pos, dev_type in enumerate(DEV_TYPES):
             self.counters[dev_type] = 0
-            if dev_type == DEV_TYPES[0]:
-                separator = None
-            else:
-                separator = Gtk.SeparatorMenuItem()
-                self.menu.add(separator)
+            separator = Gtk.SeparatorMenuItem()
+            self.menu.add(separator)
 
             self.positions[dev_type] = pos
             self.separators[dev_type] = separator
@@ -240,45 +236,43 @@ class DeviceGroups():
             self.dispatcher.add_handler('device-list-change:' + devclass,
                                         self.device_change)
 
-    def update_device_list(self):
+    def update_device_list(self, vm=None):
         devices = {}
-        for vm in self.qapp.domains:
+
+        for domain in (self.qapp.domains if not vm else [vm]):
             for devclass in DEV_TYPES:
-                for device in vm.devices[devclass]:
+                for device in domain.devices[devclass]:
                     devices[device] = []
 
-        for vm in self.qapp.domains:
+        for domain in self.qapp.domains:
             for devclass in DEV_TYPES:
-                for device in vm.devices[devclass].attached():
+                for device in domain.devices[devclass].attached():
                     if device in devices:
                         # occassionally ghost UnknownDevices appear when a
                         # device was removed but not detached from a VM
-                        devices[device].append(vm)
+                        devices[device].append(domain)
 
         for device in [dev for dev in devices if dev not in self.menu_items.keys()]:
             self.add(device, devices[device])
 
-        for device in [dev for dev in self.menu_items.keys() if dev not in devices]:
+        for device in [dev for dev in self.menu_items.keys() if dev not in devices and (dev.backend_domain == vm or vm is None)]:
             self.remove(device)
 
-    def device_change(self, _vm, _event, **_kwargs):
-        self.update_device_list()
+    def device_change(self, vm, _event, **_kwargs):
+        self.update_device_list(vm)
 
     def add(self, device, frontend_domains):
         if device.devclass not in DEV_TYPES:
             return
 
-        name = device.backend_domain.name + ':' + device.ident
         position = self._position(device.devclass)
 
-        position += len(
-            [dev for dev in self.menu_items.keys()
-             if dev.devclass == device.devclass
-             and (dev.backend_domain.name + ':' + dev.ident) < name])
+        position += len([dev for dev in self.menu_items
+                         if dev.devclass == device.devclass and dev < device])
 
         self._insert(device, frontend_domains, position)
 
-        if device.devclass not in [DEV_TYPES[0], DEV_TYPES[-1]]:
+        if device.devclass != DEV_TYPES[0]:
             self.separators[device.devclass].show()
 
         subprocess.call(['notify-send', "Device %s is available" % (device.description)])
