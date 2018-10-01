@@ -144,7 +144,7 @@ class DomainMenu(Gtk.Menu):
                      self.device.description,
                      menu_item.vm,
                      ex)])
-        except Exception as ex:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             traceback.print_exc(file=sys.stderr)
 
     def detach_item(self):
@@ -389,7 +389,7 @@ def main():
     for d in done:  # pylint: disable=invalid-name
         try:
             d.result()
-        except Exception as _ex:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             exc_type, exc_value = sys.exc_info()[:2]
             dialog = Gtk.MessageDialog(
                 None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)
