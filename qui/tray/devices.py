@@ -1,6 +1,5 @@
 # pylint: disable=wrong-import-position,import-error
 import asyncio
-import subprocess
 import sys
 
 import traceback
@@ -8,10 +7,11 @@ import traceback
 import gi
 gi.require_version('Gtk', '3.0')  # isort:skip
 gi.require_version('AppIndicator3', '0.1')  # isort:skip
-from gi.repository import Gtk  # isort:skip
+from gi.repository import Gtk, Gio  # isort:skip
 from gi.repository import AppIndicator3 as appindicator  # isort:skip
 
 import qubesadmin
+import qubesadmin.events
 from qubesadmin import exc
 import qui.decorators
 
@@ -64,7 +64,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
 class DomainMenu(Gtk.Menu):
     def __init__(self, device, frontend_domains, qapp,
-                 dispatcher, *args, **kwargs):
+                 dispatcher, gtk_app, *args, **kwargs):
         super(DomainMenu, self).__init__(*args, **kwargs)
         self.device = device
         self.menu_items = {}
@@ -72,6 +72,7 @@ class DomainMenu(Gtk.Menu):
         self.attached_items = []
         self.frontend_domains = frontend_domains
         self.dispatcher = dispatcher
+        self.gtk_app = gtk_app
 
         for vm in self.qapp.domains:
             if vm != device.backend_domain\
@@ -133,17 +134,18 @@ class DomainMenu(Gtk.Menu):
             assignment = qubesadmin.devices.DeviceAssignment(
                 self.device.backend_domain, self.device.ident, persistent=False)
             menu_item.vm.devices[menu_item.devclass].attach(assignment)
-            subprocess.call(
-                ['notify-send',
-                 "Attaching %s to %s" % (
-                     self.device.description, menu_item.vm)])
+            emit_notification(self.gtk_app, "Attaching device",
+                              "Attaching {} to {}".format(
+                self.device.description, menu_item.vm),
+                              Gio.NotificationPriority.NORMAL)
         except exc.QubesException as ex:
-            subprocess.call(
-                ['notify-send', '-t', '15000', '-i', 'dialog-error',
-                 'Attaching device {0} to {1} failed. Error: {2}'.format(
-                     self.device.description,
-                     menu_item.vm,
-                     ex)])
+            emit_notification(self.gtk_app,
+                              "Error",
+                              "Attaching device {0} to {1} failed. "
+                              "Error: {2}".format(self.device.description,
+                                                  menu_item.vm, ex),
+                              Gio.NotificationPriority.HIGH,
+                              error=True)
         except Exception:  # pylint: disable=broad-except
             traceback.print_exc(file=sys.stderr)
 
@@ -153,21 +155,23 @@ class DomainMenu(Gtk.Menu):
                     in menu_item.vm.devices[menu_item.devclass].assignments():
                 if assignment.device == self.device:
                     menu_item.vm.devices[menu_item.devclass].detach(assignment)
-            subprocess.call([
-                'notify-send',
-                "Detaching %s from %s" % (self.device.description,
-                                          menu_item.vm.name)
-            ])
+            emit_notification(self.gtk_app,
+                              "Detaching device",
+                              "Detaching {} from {}".format(
+                                  self.device.description,
+                                  menu_item.vm.name),
+                              Gio.NotificationPriority.NORMAL)
 
 
 class DeviceItem(Gtk.ImageMenuItem):
     ''' MenuItem showing the device data and a :class:`DomainMenu`. '''
 
     def __init__(self, device, frontend_domains, qapp,
-                 dispatcher, *args, **kwargs):
+                 dispatcher, gtk_app, *args, **kwargs):
         "docstring"
         super().__init__(*args, **kwargs)
 
+        self.gtk_app = gtk_app
         self.qapp = qapp
         self.device = device
         self.devclass = self.device.devclass
@@ -181,13 +185,15 @@ class DeviceItem(Gtk.ImageMenuItem):
         self.set_image(qui.decorators.create_icon(vm_icon))
         self.add(self.hbox)
         submenu = DomainMenu(
-            self.device, self.frontend_domains, qapp, self.dispatcher)
+            self.device, self.frontend_domains, qapp, self.dispatcher,
+            self.gtk_app)
         self.set_submenu(submenu)
 
         self.dispatcher.add_handler('domain-shutdown',
                                     self.vm_shutdown)
         self.dispatcher.add_handler('domain-start-failed',
                                     self.vm_shutdown)
+
 
     def vm_shutdown(self, vm, _event, **_kwargs):
         if vm in self.frontend_domains:
@@ -214,7 +220,7 @@ class DeviceItem(Gtk.ImageMenuItem):
 
 
 class DeviceGroups():
-    def __init__(self, menu: Gtk.Menu, dispatcher, qapp):
+    def __init__(self, menu: Gtk.Menu, dispatcher, qapp, gtk_app):
         self.positions = {}
         self.separators = {}
         self.counters = {}
@@ -222,6 +228,7 @@ class DeviceGroups():
         self.menu_items = {}
         self.qapp = qapp
         self.dispatcher = dispatcher
+        self.gtk_app = gtk_app
 
         for pos, dev_type in enumerate(DEV_TYPES):
             self.counters[dev_type] = 0
@@ -274,15 +281,18 @@ class DeviceGroups():
         position = self._position(device.devclass)
 
         position += len([dev for dev in self.menu_items
-                         if dev.devclass == device.devclass and dev < device])
+                         if dev.devclass == device.devclass
+                         and str(dev) < str(device)])
 
         self._insert(device, frontend_domains, position)
 
         if device.devclass != DEV_TYPES[0]:
             self.separators[device.devclass].show()
 
-        subprocess.call(
-            ['notify-send', "Device %s is available" % device.description])
+        emit_notification(self.gtk_app,
+                          "Device available",
+                          "Device {} is available".format(device.description),
+                          Gio.NotificationPriority.NORMAL)
 
     def _position(self, dev_type):
         if dev_type == DEV_TYPES[0]:
@@ -291,7 +301,7 @@ class DeviceGroups():
 
     def _insert(self, device, frontend_domains, position: int) -> None:
         menu_item = DeviceItem(device, frontend_domains, self.qapp,
-                               self.dispatcher)
+                               self.dispatcher, self.gtk_app)
         self.menu.insert(menu_item, position)
         self.counters[device.devclass] += 1
         self.menu_items[device] = menu_item
@@ -307,9 +317,11 @@ class DeviceGroups():
                 self.counters[item.devclass] -= 1
                 self._unshift_positions(item.devclass)
                 self._recalc_separators()
-                subprocess.call(
-                    ['notify-send',
-                     "Device %s is removed" % item.device.description])
+                emit_notification(
+                    self.gtk_app,
+                    "Device removed",
+                    "Device {} is removed".format(item.device.description),
+                    Gio.NotificationPriority.NORMAL)
                 return
 
     def _recalc_separators(self):
@@ -360,7 +372,11 @@ class DevicesTray(Gtk.Application):
 
         self.dispatcher = dispatcher
         self.qapp = qapp
-        self.devices = DeviceGroups(self.tray_menu, self.dispatcher, self.qapp)
+
+        self.set_application_id(self.name)
+        self.register()  # register Gtk Application
+        self.devices = DeviceGroups(self.tray_menu, self.dispatcher, self.qapp,
+                                    self)
 
         self.ind = appindicator.Indicator.new(
             'Devices Widget', "media-removable",
@@ -374,11 +390,20 @@ class DevicesTray(Gtk.Application):
         self.tray_menu.show_all()
 
 
+def emit_notification(gtk_app, title, message, priority, error=False):
+    notification = Gio.Notification.new(title)
+    notification.set_body(message)
+    notification.set_priority(priority)
+    if error:
+        notification.set_icon(Gio.ThemedIcon.new('dialog-error'))
+    gtk_app.send_notification(None, notification)
+
+
 def main():
     qapp = qubesadmin.Qubes()
     dispatcher = qubesadmin.events.EventsDispatcher(qapp)
     app = DevicesTray(
-        'org.qubes.qui.tray.Domains', qapp, dispatcher)
+        'org.qubes.qui.tray.Devices', qapp, dispatcher)
     app.run()
 
     loop = asyncio.get_event_loop()

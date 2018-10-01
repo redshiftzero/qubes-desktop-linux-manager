@@ -2,7 +2,7 @@
 import sys
 import gi
 gi.require_version('Gtk', '3.0')  # isort:skip
-from gi.repository import Gtk, GObject  # isort:skip
+from gi.repository import Gtk, GObject, Gio  # isort:skip
 from qubesadmin import Qubes
 from qubesadmin.utils import size_to_human
 
@@ -89,6 +89,11 @@ class DiskSpace(Gtk.Application):
     def __init__(self, **properties):
         super().__init__(**properties)
 
+        self.warned = False
+
+        self.set_application_id("org.qubes.qui.tray.DiskSpace")
+        self.register()
+
         self.icon = Gtk.StatusIcon()
         self.icon.connect('button-press-event', self.make_menu)
         self.refresh_icon()
@@ -106,9 +111,22 @@ class DiskSpace(Gtk.Application):
             text = "WARNING! You are running out of disk space." + \
                    ''.join(warning)
             self.icon.set_tooltip_markup(text)
+
+            if not self.warned:
+                notification = Gio.Notification.new("Disk usage warning!")
+                notification.set_priority(Gio.NotificationPriority.HIGH)
+                notification.set_body(
+                    "You are running out of disk space." + ''.join(warning))
+                notification.set_icon(
+                    Gio.ThemedIcon.new('dialog-warning'))
+
+                self.send_notification(None, notification)
+                self.warned = True
+
         else:
             self.icon.set_from_icon_name("drive-harddisk")
             self.icon.set_tooltip_markup('')
+            self.warned = False
 
         return True  # needed for Gtk to correctly loop the function
 

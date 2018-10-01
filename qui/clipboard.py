@@ -22,42 +22,36 @@
 #
 # pylint: disable=import-error
 
-''' Sends notifications via D-Bus when something
- is Copy-Pasted via Qubes RPC '''
+''' Sends notifications via Gio.Notification when something is Copy-Pasted
+via Qubes RPC '''
+# pylint: disable=invalid-name,wrong-import-position
 
 import asyncio
 import math
 import os
 import time
 
-import dbus
-import dbus.mainloop.glib
+import gi
+gi.require_version('Gtk', '3.0')  # isort:skip
+from gi.repository import Gtk, Gio  # isort:skip
+
 import gbulb
 import pyinotify
 
 gbulb.install()
-dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-
-# pylint: disable=invalid-name
 
 
 class EventHandler(pyinotify.ProcessEvent):
-    def my_init(self, loop=None):  # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ
+    def my_init(self, loop=None, gtk_app=None):
         '''  This method is called from ProcessEvent.__init__(). '''
-        bus = dbus.SessionBus()
-        proxy = bus.get_object('org.freedesktop.Notifications',
-                               '/org/freedesktop/Notifications',
-                               follow_name_owner_changes=True)
-        self.notifications_iface = dbus.Interface(
-            proxy, dbus_interface='org.freedesktop.Notifications')
-
-        self.last_id = 0
+        self.notification_id = "org.qubes.qui.clipboard"
+        self.gtk_app = gtk_app
         self._copy()
         self.loop = loop if loop else asyncio.get_event_loop()
 
     def _copy(self, vmname: str = None):
-        ''' Sends Copy notification via the
-        D-Bus `org.freedesktop.Notifications` interface.
+        ''' Sends Copy notification via Gio.Notification
         '''
         if vmname is None:
             with open(FROM, 'r') as vm_from_file:
@@ -73,8 +67,7 @@ class EventHandler(pyinotify.ProcessEvent):
         self._notify(body)
 
     def _paste(self):
-        ''' Sends Paste notification via
-        the D-Bus `org.freedesktop.Notifications` interface.
+        ''' Sends Paste notification via Gio.Notification.
         '''
         body = "Qubes Clipboard has been copied to the VM and wiped.<i/>\n" \
                 "<small>Trigger a paste operation (e.g. Ctrl-v) to insert " \
@@ -83,8 +76,10 @@ class EventHandler(pyinotify.ProcessEvent):
 
     def _notify(self, body):
         # pylint: disable=attribute-defined-outside-init
-        self.last_id = self.notifications_iface.Notify(
-            '', self.last_id, '', 'Qubes Clipboard', body, [], [], 5000)
+        notification = Gio.Notification.new("Qubes Clipboard")
+        notification.set_body(body)
+        notification.set_priority(Gio.NotificationPriority.NORMAL)
+        self.gtk_app.send_notification(self.notification_id, notification)
 
     def process_IN_CLOSE_WRITE(self, _):
         ''' Reacts to modifications of the FROM file '''
@@ -131,9 +126,17 @@ DATA = "/var/run/qubes/qubes-clipboard.bin"
 FROM = "/var/run/qubes/qubes-clipboard.bin.source"
 
 
+class NotificationApp(Gtk.Application):
+    def __init__(self, **properties):
+        super().__init__(**properties)
+        self.set_application_id("org.qubes.qui.clipboard")
+        self.register()  # register Gtk Application
+
+
 def main():
     loop = asyncio.get_event_loop()
     mask = pyinotify.ALL_EVENTS
+    gtk_app = NotificationApp()
     wm = pyinotify.WatchManager()
 
     while True:
@@ -141,7 +144,7 @@ def main():
             time.sleep(0.5)
         else:
             wm.add_watch(FROM, mask)
-            handler = EventHandler(loop=loop)
+            handler = EventHandler(loop=loop, gtk_app=gtk_app)
             pyinotify.AsyncioNotifier(wm, loop, default_proc_fun=handler)
             loop.run_forever()
 
