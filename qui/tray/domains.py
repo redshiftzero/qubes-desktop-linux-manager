@@ -328,7 +328,13 @@ class DomainTray(Gtk.Application):
         self.stats_dispatcher.add_handler('vm-stats', self.update_stats)
 
     def show_menu(self, _, event):
-        self.tray_menu.show_all()
+        menu = Gtk.Menu()
+        for vm in sorted(self.menu_items):
+            self.tray_menu.remove(self.menu_items[vm])
+            menu.add(self.menu_items[vm])
+        menu.show_all()
+        self.tray_menu = menu
+
         self.tray_menu.popup(None,  # parent_menu_shell
                              None,  # parent_menu_item
                              None,  # func
@@ -413,8 +419,6 @@ class DomainTray(Gtk.Application):
             position += 1
         self.tray_menu.insert(domain_item, position)
         self.menu_items[vm] = domain_item
-        self.tray_menu.show_all()
-        self.tray_menu.queue_draw()
 
     def remove_domain_item(self, vm, _event, **_kwargs):
         ''' Remove the menu item for the specified domain from the tray'''
@@ -423,7 +427,6 @@ class DomainTray(Gtk.Application):
         vm_widget = self.menu_items[vm]
         self.tray_menu.remove(vm_widget)
         del self.menu_items[vm]
-        self.tray_menu.queue_draw()
 
     def update_domain_item(self, vm, event, **kwargs):
         ''' Update the menu item with the started menu for
