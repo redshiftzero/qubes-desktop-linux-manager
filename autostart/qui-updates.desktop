@@ -1,0 +1,7 @@
+[Desktop Entry]
+Icon=qubes
+Name=Updates Tray
+Categories=System;Monitor;
+Exec=python3 -mqui.tray.updates
+Terminal=false
+Type=Application

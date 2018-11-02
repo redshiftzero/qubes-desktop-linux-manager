@@ -79,8 +79,11 @@ cp autostart/qui-domains.desktop $RPM_BUILD_ROOT/etc/xdg/autostart
 cp autostart/qui-devices.desktop $RPM_BUILD_ROOT/etc/xdg/autostart
 cp autostart/qui-clipboard.desktop $RPM_BUILD_ROOT/etc/xdg/autostart
 cp autostart/qui-disk-space.desktop $RPM_BUILD_ROOT/etc/xdg/autostart
+cp autostart/qui-updates.desktop $RPM_BUILD_ROOT/etc/xdg/autostart
 mkdir -p $RPM_BUILD_ROOT/usr/share/icons/Adwaita/22x22/devices/
 cp icons/22x22/generic-usb.png $RPM_BUILD_ROOT/usr/share/icons/Adwaita/22x22/devices/generic-usb.png
+mkdir -p $RPM_BUILD_ROOT/usr/share/applications
+cp qubes-update-gui.desktop $RPM_BUILD_ROOT/usr/share/applications/
 
 %post
 touch --no-create %{_datadir}/icons/Adwaita &>/dev/null || :
@@ -108,6 +111,8 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 %{python3_sitelib}/qui/decorators.py
 %{python3_sitelib}/qui/domains_table.py
 %{python3_sitelib}/qui/clipboard.py
+%{python3_sitelib}/qui/updater.py
+%{python3_sitelib}/qui/updater.glade
 
 %dir %{python3_sitelib}/qui/tray/
 %dir %{python3_sitelib}/qui/tray/__pycache__
@@ -116,13 +121,18 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 %{python3_sitelib}/qui/tray/domains.py
 %{python3_sitelib}/qui/tray/devices.py
 %{python3_sitelib}/qui/tray/disk_space.py
+%{python3_sitelib}/qui/tray/updates.py
 
 %{_bindir}/qui-ls
 %{_bindir}/qui-domains
 %{_bindir}/qui-devices
 %{_bindir}/qui-disk-space
+%{_bindir}/qui-updates
+%{_bindir}/qubes-update-gui
 /etc/xdg/autostart/qui-domains.desktop
 /etc/xdg/autostart/qui-devices.desktop
 /etc/xdg/autostart/qui-clipboard.desktop
 /etc/xdg/autostart/qui-disk-space.desktop
+/etc/xdg/autostart/qui-updates.desktop
 /usr/share/icons/Adwaita/22x22/devices/generic-usb.png
+/usr/share/applications/qubes-update-gui.desktop

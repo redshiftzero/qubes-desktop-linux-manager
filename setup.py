@@ -16,6 +16,9 @@ setup(name='qui',
               'qui-ls = qui.domains_table:main',
               'qui-domains = qui.tray.domains:main',
               'qui-devices = qui.tray.devices:main',
-              'qui-disk-space = qui.tray.disk_space:main'
+              'qui-disk-space = qui.tray.disk_space:main',
+              'qui-updates = qui.tray.updates:main',
+              'qubes-update-gui = qui.updater:main'
           ]
-      })
+      },
+      package_data={'qui': "*.glade"})

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Exec=qubes-update-gui
+Icon=qubes-manager
+Terminal=false
+Name=Qubes Update
+GenericName=Qubes Update
+StartupNotify=false
+Categories=System;
