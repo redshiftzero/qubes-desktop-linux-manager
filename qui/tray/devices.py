@@ -8,7 +8,6 @@ import gi
 gi.require_version('Gtk', '3.0')  # isort:skip
 gi.require_version('AppIndicator3', '0.1')  # isort:skip
 from gi.repository import Gtk, Gio  # isort:skip
-from gi.repository import AppIndicator3 as appindicator  # isort:skip
 
 import qubesadmin
 import qubesadmin.events
@@ -378,11 +377,19 @@ class DevicesTray(Gtk.Application):
         self.devices = DeviceGroups(self.tray_menu, self.dispatcher, self.qapp,
                                     self)
 
-        self.ind = appindicator.Indicator.new(
-            'Devices Widget', "media-removable",
-            appindicator.IndicatorCategory.SYSTEM_SERVICES)
-        self.ind.set_status(appindicator.IndicatorStatus.ACTIVE)
-        self.ind.set_menu(self.tray_menu)
+        self.widget_icon = Gtk.StatusIcon()
+        self.widget_icon.set_from_icon_name('media-removable')
+        self.widget_icon.connect('button-press-event', self.show_menu)
+        self.widget_icon.set_tooltip_markup(
+            '<b>Qubes Devices</b>\nView and manage devices.')
+
+    def show_menu(self, _, event):
+        self.tray_menu.popup(None,  # parent_menu_shell
+                             None,  # parent_menu_item
+                             None,  # func
+                             None,  # data
+                             event.button,  # button
+                             Gtk.get_current_event_time())  # activate_time
 
     def run(self):  # pylint: disable=arguments-differ
         self.devices.update_device_list()
