@@ -21,4 +21,4 @@ setup(name='qui',
               'qubes-update-gui = qui.updater:main'
           ]
       },
-      package_data={'qui': "*.glade"})
+      package_data={'qui': ["updater.glade"]})

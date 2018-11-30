@@ -6,6 +6,7 @@ import re
 import time
 import threading
 import subprocess
+import pkg_resources
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gtk, Gdk, GObject  # isort:skip
@@ -20,8 +21,11 @@ class QubesUpdater(Gtk.Application):
 
         self.qapp = qapp
 
+        self.connect("activate", lambda _app: None)
+
         self.builder = Gtk.Builder()
-        self.builder.add_from_file('updater.glade')
+        self.builder.add_from_file(pkg_resources.resource_filename(
+            __name__, 'updater.glade'))
 
         self.main_window = self.builder.get_object("main_window")
 
@@ -34,6 +38,7 @@ class QubesUpdater(Gtk.Application):
         self.cancel_button = self.builder.get_object("button_cancel")
         self.cancel_button.connect("clicked", self.cancel_updates)
         self.main_window.connect("destroy", self.exit_updater)
+        self.main_window.connect("key-press-event", self.check_escape)
 
         self.stack = self.builder.get_object("main_stack")
         self.list_page = self.builder.get_object("list_page")
@@ -196,6 +201,12 @@ class QubesUpdater(Gtk.Application):
                     Gtk.main_iteration()
                 time.sleep(1)
             dialog.hide()
+        else:
+            Gtk.main_quit()
+
+    def check_escape(self, _widget, event, _data=None):
+        if event.keyval == Gdk.KEY_Escape:
+            self.cancel_updates()
 
     @staticmethod
     def exit_updater(_emitter=None):
@@ -225,6 +236,8 @@ class VMListBoxRow(Gtk.ListBoxRow):
         self.checkbox.set_active(updates_available)
         self.checkbox.set_margin_right(10)
 
+        self.checkbox.connect("clicked", self.set_label_text)
+
         self.set_label_text()
 
         hbox.pack_start(self.checkbox, False, False, 0)
@@ -233,7 +246,7 @@ class VMListBoxRow(Gtk.ListBoxRow):
 
         self.add(hbox)
 
-    def set_label_text(self):
+    def set_label_text(self, _=None):
         if self.checkbox.get_active():
             self.label.set_markup("<b>{}</b>".format(self.label_text))
         else:

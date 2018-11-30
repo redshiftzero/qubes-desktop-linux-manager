@@ -11,10 +11,10 @@
       <object class="GtkGrid">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="margin_left">20</property>
-        <property name="margin_right">20</property>
-        <property name="margin_top">20</property>
-        <property name="margin_bottom">20</property>
+        <property name="margin_left">10</property>
+        <property name="margin_right">10</property>
+        <property name="margin_top">10</property>
+        <property name="margin_bottom">10</property>
         <property name="hexpand">True</property>
         <property name="row_spacing">20</property>
         <property name="column_spacing">20</property>
@@ -43,8 +43,6 @@
               <object class="GtkBox" id="list_page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_top">20</property>
-                <property name="margin_bottom">20</property>
                 <property name="vexpand">True</property>
                 <property name="orientation">vertical</property>
                 <property name="baseline_position">top</property>
@@ -54,9 +52,8 @@
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
                     <property name="valign">start</property>
-                    <property name="margin_bottom">20</property>
+                    <property name="margin_bottom">10</property>
                     <property name="hexpand">True</property>
-                    <property name="vexpand">True</property>
                     <property name="label" translatable="yes">Select templates and qubes to update:</property>
                   </object>
                   <packing>
@@ -70,7 +67,6 @@
                     <property name="height_request">400</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="margin_bottom">20</property>
                     <property name="hexpand">True</property>
                     <property name="vexpand">True</property>
                     <property name="selection_mode">none</property>
@@ -210,12 +206,6 @@
                 <property name="position">1</property>
               </packing>
             </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
           </object>
           <packing>
             <property name="left_attach">0</property>
@@ -243,6 +233,9 @@
           <placeholder/>
         </child>
       </object>
+    </child>
+    <child type="titlebar">
+      <placeholder/>
     </child>
   </object>
 </interface>
