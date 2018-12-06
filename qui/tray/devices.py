@@ -289,6 +289,8 @@ class DeviceGroups():
         if device.devclass != DEV_TYPES[0]:
             self.separators[device.devclass].show()
 
+        if self.gtk_app.startup_in_process:
+            return
         emit_notification(self.gtk_app,
                           "Device available",
                           "Device {} is available".format(device.description),
@@ -370,6 +372,8 @@ class DevicesTray(Gtk.Application):
         self.name = app_name
         self.tray_menu = Gtk.Menu()
 
+        self.startup_in_process = True
+
         self.dispatcher = dispatcher
         self.qapp = qapp
 
@@ -388,6 +392,8 @@ class DevicesTray(Gtk.Application):
         self.devices.update_device_list()
 
         self.tray_menu.show_all()
+
+        self.startup_in_process = False
 
 
 def emit_notification(gtk_app, title, message, priority, error=False):
