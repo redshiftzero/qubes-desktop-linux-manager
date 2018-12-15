@@ -302,7 +302,7 @@ class DomainTray(Gtk.Application):
         self.register()  # register Gtk Application
 
     def register_events(self):
-        self.dispatcher.add_handler('domain-pre-start', self.add_domain_item)
+        self.dispatcher.add_handler('domain-pre-start', self.update_domain_item)
         self.dispatcher.add_handler('domain-start', self.update_domain_item)
         self.dispatcher.add_handler('domain-start-failed',
                                     self.remove_domain_item)
