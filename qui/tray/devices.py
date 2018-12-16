@@ -150,16 +150,27 @@ class DomainMenu(Gtk.Menu):
 
     def detach_item(self):
         for menu_item in self.attached_items:
-            for assignment\
-                    in menu_item.vm.devices[menu_item.devclass].assignments():
-                if assignment.device == self.device:
-                    menu_item.vm.devices[menu_item.devclass].detach(assignment)
             emit_notification(self.gtk_app,
                               "Detaching device",
                               "Detaching {} from {}".format(
                                   self.device.description,
                                   menu_item.vm.name),
                               Gio.NotificationPriority.NORMAL)
+            for assignment\
+                    in menu_item.vm.devices[menu_item.devclass].assignments():
+                try:
+                    if assignment.device == self.device:
+                        menu_item.vm.devices[menu_item.devclass].detach(
+                            assignment)
+                except exc.QubesException as ex:
+                    emit_notification(self.gtk_app,
+                                      "Error",
+                                      "Detaching device {0} from {1} failed. "
+                                      "Error: {2}".format(
+                                          self.device.description,
+                                          menu_item.vm, ex),
+                                      Gio.NotificationPriority.HIGH,
+                                      error=True)
 
 
 class DeviceItem(Gtk.ImageMenuItem):
@@ -192,7 +203,11 @@ class DeviceItem(Gtk.ImageMenuItem):
                                     self.vm_shutdown)
         self.dispatcher.add_handler('domain-start-failed',
                                     self.vm_shutdown)
+        self.dispatcher.add_handler('domain-start', self.vm_start)
 
+    def vm_start(self, vm, _event, **_kwargs):
+        if self.device in vm.devices[self.devclass].attached():
+            self.device_attached(vm)
 
     def vm_shutdown(self, vm, _event, **_kwargs):
         if vm in self.frontend_domains:
@@ -353,12 +368,16 @@ class DeviceGroups():
             self.positions[index] -= 1
 
     def device_attached(self, vm, _event, device, **_kwargs):
+        if not vm.is_running():
+            return
         for item in self.menu.get_children():
             if getattr(item, 'device', None) == device \
                     or str(getattr(item, 'device', None)) == str(device):
                 item.device_attached(vm)
 
     def device_detached(self, vm, _event, device, **_kwargs):
+        if not vm.is_running():
+            return
         for item in self.menu.get_children():
             if getattr(item, 'device', None) == device \
                     or str(getattr(item, 'device', None)) == str(device):
