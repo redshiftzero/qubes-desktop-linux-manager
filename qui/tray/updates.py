@@ -33,17 +33,59 @@ class UpdatesTray(Gtk.Application):
         self.widget_icon = Gtk.StatusIcon()
         self.widget_icon.set_from_icon_name('software-update-available')
         self.widget_icon.set_visible(False)
-        self.widget_icon.connect('button-press-event', self.launch_updater)
+        self.widget_icon.connect('button-press-event', self.show_menu)
         self.widget_icon.set_tooltip_markup(
             '<b>Qubes Update</b>\nUpdates are available.')
 
         self.vms_needing_update = set()
+
+        self.tray_menu = Gtk.Menu()
 
     def run(self):  # pylint: disable=arguments-differ
         self.check_vms_needing_update()
         self.connect_events()
 
         self.update_indicator_state()
+
+    def setup_menu(self):
+        title_label = Gtk.Label(xalign=0)
+        title_label.set_markup("<b>Qube Updates Available</b>")
+        title_menu_item = Gtk.MenuItem()
+        title_menu_item.add(title_label)
+        title_menu_item.set_sensitive(False)
+
+        subtitle_label = Gtk.Label(xalign=0)
+        subtitle_label.set_markup("<i>Updates available for {} qubes</i>".format(
+            len(self.vms_needing_update)))
+        subtitle_menu_item = Gtk.MenuItem()
+        subtitle_menu_item.set_margin_left(10)
+        subtitle_menu_item.add(subtitle_label)
+        subtitle_menu_item.set_sensitive(False)
+
+        run_label = Gtk.Label(xalign=0)
+        run_label.set_text("Launch updater")
+        run_menu_item = Gtk.MenuItem()
+        run_menu_item.set_margin_left(10)
+        run_menu_item.add(run_label)
+        run_menu_item.connect('activate', self.launch_updater)
+
+        self.tray_menu.append(title_menu_item)
+        self.tray_menu.append(subtitle_menu_item)
+        self.tray_menu.append(run_menu_item)
+
+        self.tray_menu.show_all()
+
+    def show_menu(self, _, event):
+        self.tray_menu = Gtk.Menu()
+
+        self.setup_menu()
+
+        self.tray_menu.popup(None,  # parent_menu_shell
+                             None,  # parent_menu_item
+                             None,  # func
+                             None,  # data
+                             event.button,  # button
+                             Gtk.get_current_event_time())  # activate_time
 
     @staticmethod
     def launch_updater(*_args, **_kwargs):

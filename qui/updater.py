@@ -9,7 +9,7 @@ import subprocess
 import pkg_resources
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
-from gi.repository import Gtk, Gdk, GObject  # isort:skip
+from gi.repository import Gtk, Gdk, GObject, Gio  # isort:skip
 from qubesadmin import Qubes
 
 
@@ -17,12 +17,17 @@ class QubesUpdater(Gtk.Application):
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, qapp):
-        super(QubesUpdater, self).__init__()
+        super(QubesUpdater, self).__init__(
+            application_id="org.gnome.example",
+            flags=Gio.ApplicationFlags.FLAGS_NONE)
 
         self.qapp = qapp
 
-        self.connect("activate", lambda _app: None)
+        self.primary = False
+        self.connect("activate", self.do_activate)
 
+    def perform_setup(self, *_args, **_kwargs):
+        # pylint: disable=attribute-defined-outside-init
         self.builder = Gtk.Builder()
         self.builder.add_from_file(pkg_resources.resource_filename(
             __name__, 'updater.glade'))
@@ -37,7 +42,7 @@ class QubesUpdater(Gtk.Application):
 
         self.cancel_button = self.builder.get_object("button_cancel")
         self.cancel_button.connect("clicked", self.cancel_updates)
-        self.main_window.connect("destroy", self.exit_updater)
+        self.main_window.connect("delete-event", self.window_close)
         self.main_window.connect("key-press-event", self.check_escape)
 
         self.stack = self.builder.get_object("main_stack")
@@ -64,7 +69,13 @@ class QubesUpdater(Gtk.Application):
         self.update_thread = None
         self.exit_triggered = False
 
-        Gtk.main()
+    def do_activate(self, *_args, **_kwargs):
+        if not self.primary:
+            self.perform_setup()
+            self.primary = True
+            self.hold()
+        else:
+            self.main_window.present()
 
     @staticmethod
     def load_css():
@@ -119,14 +130,16 @@ class QubesUpdater(Gtk.Application):
             self.next_button.set_sensitive(False)
             self.next_button.set_label("Finish")
 
+            # pylint: disable=attribute-defined-outside-init
             self.update_thread = threading.Thread(target=self.perform_update)
             self.update_thread.start()
 
         elif self.stack.get_visible_child() == self.progress_page:
-            self.exit_updater()
+            self.cancel_updates()
             return
 
     def toggle_details(self, *_args, **_kwargs):
+        # pylint: disable=attribute-defined-outside-init
         self.details_visible = not self.details_visible
         self.progress_textview.set_visible(self.details_visible)
 
@@ -190,6 +203,7 @@ class QubesUpdater(Gtk.Application):
         GObject.idle_add(self.cancel_button.set_visible, False)
 
     def cancel_updates(self, *_args, **_kwargs):
+        # pylint: disable=attribute-defined-outside-init
         if self.update_thread and self.update_thread.is_alive():
             self.exit_triggered = True
             dialog = Gtk.MessageDialog(
@@ -202,15 +216,20 @@ class QubesUpdater(Gtk.Application):
                 time.sleep(1)
             dialog.hide()
         else:
-            Gtk.main_quit()
+            self.exit_updater()
 
     def check_escape(self, _widget, event, _data=None):
         if event.keyval == Gdk.KEY_Escape:
             self.cancel_updates()
 
-    @staticmethod
-    def exit_updater(_emitter=None):
-        Gtk.main_quit()
+    def window_close(self, *_args, **_kwargs):
+        if self.stack.get_visible_child() == self.progress_page:
+            self.cancel_updates()
+        self.exit_updater()
+
+    def exit_updater(self, _emitter=None):
+        if self.primary:
+            self.release()
 
 
 def get_domain_icon(vm):
