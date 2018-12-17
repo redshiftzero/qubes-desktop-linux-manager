@@ -55,8 +55,9 @@ class UpdatesTray(Gtk.Application):
         title_menu_item.set_sensitive(False)
 
         subtitle_label = Gtk.Label(xalign=0)
-        subtitle_label.set_markup("<i>Updates available for {} qubes</i>".format(
-            len(self.vms_needing_update)))
+        subtitle_label.set_markup(
+            "<i>Updates available for {} qubes</i>".format(
+                len(self.vms_needing_update)))
         subtitle_menu_item = Gtk.MenuItem()
         subtitle_menu_item.set_margin_left(10)
         subtitle_menu_item.add(subtitle_label)
@@ -111,7 +112,8 @@ class UpdatesTray(Gtk.Application):
 
     def feature_set(self, vm, event, feature, value, **_kwargs):
         # pylint: disable=unused-argument
-        if value and vm not in self.vms_needing_update:
+        if value and vm not in self.vms_needing_update and\
+                getattr(vm, 'updateable', False):
             self.vms_needing_update.add(vm)
 
             notification = Gio.Notification.new(
