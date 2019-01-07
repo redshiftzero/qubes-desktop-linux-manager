@@ -1,0 +1,9 @@
+[Unit]
+Description=Ensures Qubes widgets are running and restarting as needed.
+
+[Service]
+ExecStart=/usr/bin/widget-wrapper %i
+Restart=on-failure
+RestartSec=1
+StartLimitIntervalSec=5
+StartLimitBurst=3

@@ -84,6 +84,10 @@ mkdir -p $RPM_BUILD_ROOT/usr/share/icons/Adwaita/22x22/devices/
 cp icons/22x22/generic-usb.png $RPM_BUILD_ROOT/usr/share/icons/Adwaita/22x22/devices/generic-usb.png
 mkdir -p $RPM_BUILD_ROOT/usr/share/applications
 cp qubes-update-gui.desktop $RPM_BUILD_ROOT/usr/share/applications/
+mkdir -p $RPM_BUILD_ROOT/usr/lib/qubes/
+cp qui/widget-wrapper.sh $RPM_BUILD_ROOT/usr/bin/widget-wrapper
+mkdir -p $RPM_BUILD_ROOT/lib/systemd/user/
+cp linux-systemd/qubes-widget@.service $RPM_BUILD_ROOT/lib/systemd/user/
 
 %post
 touch --no-create %{_datadir}/icons/Adwaita &>/dev/null || :
@@ -136,3 +140,5 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 /etc/xdg/autostart/qui-updates.desktop
 /usr/share/icons/Adwaita/22x22/devices/generic-usb.png
 /usr/share/applications/qubes-update-gui.desktop
+/usr/bin/widget-wrapper
+/lib/systemd/user/qubes-widget@.service

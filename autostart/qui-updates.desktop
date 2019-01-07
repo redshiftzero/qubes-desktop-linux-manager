@@ -2,6 +2,6 @@
 Icon=qubes
 Name=Updates Tray
 Categories=System;Monitor;
-Exec=python3 -mqui.tray.updates
+Exec=systemctl --user start qubes-widget@qui-updates
 Terminal=false
 Type=Application

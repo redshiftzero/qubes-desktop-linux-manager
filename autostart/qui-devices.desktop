@@ -2,7 +2,7 @@
 Icon=media-removable
 Name=Devices Tray
 Categories=System;Monitor;
-Exec=python3 -mqui.tray.devices
+Exec=systemctl --user start qubes-widget@qui-devices
 Terminal=false
 Type=Application
 
