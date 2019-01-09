@@ -85,7 +85,7 @@ cp icons/22x22/generic-usb.png $RPM_BUILD_ROOT/usr/share/icons/Adwaita/22x22/dev
 mkdir -p $RPM_BUILD_ROOT/usr/share/applications
 cp qubes-update-gui.desktop $RPM_BUILD_ROOT/usr/share/applications/
 mkdir -p $RPM_BUILD_ROOT/usr/lib/qubes/
-cp qui/widget-wrapper.sh $RPM_BUILD_ROOT/usr/bin/widget-wrapper
+cp qui/widget-wrapper $RPM_BUILD_ROOT/usr/bin/widget-wrapper
 mkdir -p $RPM_BUILD_ROOT/lib/systemd/user/
 cp linux-systemd/qubes-widget@.service $RPM_BUILD_ROOT/lib/systemd/user/
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Ensures Qubes widgets are running and restarting as needed.
+Description=Qubes Widet service
 
 [Service]
 ExecStart=/usr/bin/widget-wrapper %i
