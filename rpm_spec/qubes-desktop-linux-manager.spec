@@ -52,6 +52,7 @@ Requires:  libappindicator-gtk3
 Requires:  python3-systemd
 Requires:  gtk3
 Requires:  python3-qubesadmin >= 4.0.16
+Requires:  qubes-mgmt-salt-dom0-update >= 4.0.5
 
 Provides:   qui = %{version}-%{release}
 Obsoletes:  qui < 4.0.0

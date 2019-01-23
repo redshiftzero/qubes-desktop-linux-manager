@@ -186,7 +186,7 @@ class QubesUpdater(Gtk.Application):
                     output = subprocess.check_output(
                         ['sudo', 'qubesctl', '--skip-dom0',
                          '--targets=' + row.vm.name, '--show-output',
-                         'pkg.upgrade', 'refresh=True'],
+                         'state.sls', 'update.qubes-vm'],
                         stderr=subprocess.STDOUT).decode()
 
                 GObject.idle_add(self.append_text_view, output)
