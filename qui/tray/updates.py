@@ -95,7 +95,8 @@ class UpdatesTray(Gtk.Application):
     def check_vms_needing_update(self):
         self.vms_needing_update.clear()
         for vm in self.qapp.domains:
-            if vm.features.get('updates-available', False):
+            if vm.features.get('updates-available', False) and \
+                    getattr(vm, 'updateable', False):
                 self.vms_needing_update.add(vm.name)
 
     def connect_events(self):

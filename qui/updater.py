@@ -35,7 +35,17 @@ class QubesUpdater(Gtk.Application):
         self.main_window = self.builder.get_object("main_window")
 
         self.vm_list = self.builder.get_object("vm_list")
-        self.populate_vm_list()
+
+        self.updates_available = self.populate_vm_list()
+
+        self.no_updates_available_label = \
+            self.builder.get_object("no_updates_available")
+        self.no_updates_available_label.set_visible(not self.updates_available)
+
+        self.allow_update_unavailable_check = \
+            self.builder.get_object("allow_update_unavailable")
+        self.allow_update_unavailable_check.connect("clicked",
+                                                    self.set_update_available)
 
         self.next_button = self.builder.get_object("button_next")
         self.next_button.connect("clicked", self.next_clicked)
@@ -95,17 +105,21 @@ class QubesUpdater(Gtk.Application):
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def populate_vm_list(self):
+        result = False  # whether at least one VM has updates available
         for vm in self.qapp.domains:
             if vm.klass == 'AdminVM':
-                self.vm_list.add(VMListBoxRow(
-                    vm, vm.features.get('updates-available', False)))
+                state = vm.features.get('updates-available', False)
+                result = result or state
+                self.vm_list.add(VMListBoxRow(vm, state))
 
         for vm in self.qapp.domains:
             if getattr(vm, 'updateable', False):
-                self.vm_list.add(VMListBoxRow(
-                    vm, vm.features.get('updates-available', False)))
+                state = vm.features.get('updates-available', False)
+                result = result or state
+                self.vm_list.add(VMListBoxRow(vm, state))
 
         self.vm_list.connect("row-activated", self.toggle_row_selection)
+        return result
 
     def toggle_row_selection(self, _emitter, row):
         if row:
@@ -116,6 +130,13 @@ class QubesUpdater(Gtk.Application):
                 self.next_button.set_sensitive(True)
                 return
             self.next_button.set_sensitive(False)
+
+    def set_update_available(self, _emitter):
+        for vm_row in self.vm_list:
+            if not vm_row.updates_available:
+                vm_row.set_sensitive(not vm_row.get_sensitive())
+                if not vm_row.get_sensitive():
+                    vm_row.checkbox.set_active(False)
 
     def next_clicked(self, _emitter):
         if self.stack.get_visible_child() == self.list_page:
@@ -246,16 +267,18 @@ class VMListBoxRow(Gtk.ListBoxRow):
         hbox = Gtk.HBox(orientation=Gtk.Orientation.HORIZONTAL)
 
         self.label_text = vm.name
-        if updates_available:
+        self.updates_available = updates_available
+        if self.updates_available:
             self.label_text = self.label_text + " (updates available)"
         self.label = Gtk.Label()
         self.icon = get_domain_icon(self.vm)
 
         self.checkbox = Gtk.CheckButton()
-        self.checkbox.set_active(updates_available)
+        self.checkbox.set_active(self.updates_available)
         self.checkbox.set_margin_right(10)
 
         self.checkbox.connect("clicked", self.set_label_text)
+        self.set_sensitive(self.updates_available)
 
         self.set_label_text()
 
