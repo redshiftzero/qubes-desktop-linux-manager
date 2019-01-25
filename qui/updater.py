@@ -134,7 +134,8 @@ class QubesUpdater(Gtk.Application):
     def set_update_available(self, _emitter):
         for vm_row in self.vm_list:
             if not vm_row.updates_available:
-                vm_row.set_sensitive(not vm_row.get_sensitive())
+                vm_row.set_sensitive(
+                    self.allow_update_unavailable_check.get_active())
                 if not vm_row.get_sensitive():
                     vm_row.checkbox.set_active(False)
 
