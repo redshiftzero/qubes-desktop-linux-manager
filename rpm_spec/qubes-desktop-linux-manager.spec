@@ -133,6 +133,7 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 %{_bindir}/qui-devices
 %{_bindir}/qui-disk-space
 %{_bindir}/qui-updates
+%{_bindir}/qui-clipboard
 %{_bindir}/qubes-update-gui
 /etc/xdg/autostart/qui-domains.desktop
 /etc/xdg/autostart/qui-devices.desktop

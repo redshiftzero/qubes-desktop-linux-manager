@@ -18,7 +18,8 @@ setup(name='qui',
               'qui-devices = qui.tray.devices:main',
               'qui-disk-space = qui.tray.disk_space:main',
               'qui-updates = qui.tray.updates:main',
-              'qubes-update-gui = qui.updater:main'
+              'qubes-update-gui = qui.updater:main',
+              'qui-clipboard = qui.clipboard:main'
           ]
       },
       package_data={'qui': ["updater.glade"]})
