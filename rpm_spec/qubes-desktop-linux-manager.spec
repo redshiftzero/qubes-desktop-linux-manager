@@ -114,7 +114,6 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 %{python3_sitelib}/qui/__pycache__/*
 %{python3_sitelib}/qui/__init__.py
 %{python3_sitelib}/qui/decorators.py
-%{python3_sitelib}/qui/domains_table.py
 %{python3_sitelib}/qui/clipboard.py
 %{python3_sitelib}/qui/updater.py
 %{python3_sitelib}/qui/updater.glade
@@ -128,7 +127,6 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 %{python3_sitelib}/qui/tray/disk_space.py
 %{python3_sitelib}/qui/tray/updates.py
 
-%{_bindir}/qui-ls
 %{_bindir}/qui-domains
 %{_bindir}/qui-devices
 %{_bindir}/qui-disk-space

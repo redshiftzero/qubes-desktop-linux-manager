@@ -13,7 +13,6 @@ setup(name='qui',
       packages=("qui", "qui.tray"),
       entry_points={
           'gui_scripts': [
-              'qui-ls = qui.domains_table:main',
               'qui-domains = qui.tray.domains:main',
               'qui-devices = qui.tray.devices:main',
               'qui-disk-space = qui.tray.disk_space:main',
