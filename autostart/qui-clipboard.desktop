@@ -2,6 +2,6 @@
 Icon=edit-paste
 Name=Domains Tray
 Categories=System;Monitor;
-Exec=python3 -mqui.clipboard
+Exec=systemctl --user start qubes-widget@qui-clipboard
 Terminal=false
 Type=Application
