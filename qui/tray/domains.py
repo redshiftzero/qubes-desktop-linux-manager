@@ -204,6 +204,22 @@ class DebugMenu(Gtk.Menu):
         self.add(KillItem(self.vm))
 
 
+def run_manager(_item):
+    subprocess.Popen(['qubes-qube-manager'])
+
+
+class QubesManagerItem(Gtk.ImageMenuItem):
+    def __init__(self):
+        super(QubesManagerItem, self).__init__()
+
+        self.set_image(Gtk.Image.new_from_icon_name('qubes-logo-icon',
+                                                    Gtk.IconSize.MENU))
+
+        self.set_label('Open Qube Manager')
+
+        self.connect('activate', run_manager)
+
+
 class DomainMenuItem(Gtk.ImageMenuItem):
     def __init__(self, vm):
         super().__init__()
@@ -332,6 +348,8 @@ class DomainTray(Gtk.Application):
         for vm in sorted(self.menu_items):
             self.tray_menu.remove(self.menu_items[vm])
             menu.add(self.menu_items[vm])
+        menu.add(Gtk.SeparatorMenuItem())
+        menu.add(QubesManagerItem())
         menu.show_all()
         self.tray_menu = menu
 
