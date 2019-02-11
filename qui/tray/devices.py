@@ -407,6 +407,16 @@ class DevicesTray(Gtk.Application):
             '<b>Qubes Devices</b>\nView and manage devices.')
 
     def show_menu(self, _, event):
+        # this  awkward hack is used to workaround a Gtk bug
+        # that seems to manifest when the widget icon in placed
+        # on bottom of the screen
+        menu = Gtk.Menu()
+        for item in self.tray_menu.get_children():
+            self.tray_menu.remove(item)
+            menu.add(item)
+        menu.show_all()
+        self.tray_menu = menu
+
         self.tray_menu.popup(None,  # parent_menu_shell
                              None,  # parent_menu_item
                              None,  # func
