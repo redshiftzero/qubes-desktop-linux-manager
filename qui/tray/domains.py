@@ -432,7 +432,7 @@ class DomainTray(Gtk.Application):
         domain_item = DomainMenuItem(vm)
         position = 0
         for i in self.tray_menu:  # pylint: disable=not-an-iterable
-            if i.vm.name > vm.name:
+            if not hasattr(i, 'vm') or i.vm.name > vm.name:
                 break
             position += 1
         self.tray_menu.insert(domain_item, position)
@@ -509,6 +509,8 @@ def main():
     done, _ = loop.run_until_complete(asyncio.wait(
             tasks, return_when=asyncio.FIRST_EXCEPTION))
 
+    exit_code = 0
+
     for d in done:  # pylint: disable=invalid-name
         try:
             d.result()
@@ -526,6 +528,8 @@ def main():
                    exc_type.__name__, exc_value, traceback.format_exc(limit=10)
                 ))
             dialog.run()
+            exit_code = 1
+    return exit_code
 
 
 if __name__ == '__main__':

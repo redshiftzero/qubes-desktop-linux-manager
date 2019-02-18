@@ -145,6 +145,8 @@ def main():
     done, _ = loop.run_until_complete(asyncio.ensure_future(
         dispatcher.listen_for_events()))
 
+    exit_code = 0
+
     for d in done:  # pylint: disable=invalid-name
         try:
             d.result()
@@ -162,6 +164,8 @@ def main():
                    exc_type.__name__, exc_value, traceback.format_exc(limit=10)
                 ))
             dialog.run()
+            exit_code = 1
+    return exit_code
 
 
 if __name__ == '__main__':
