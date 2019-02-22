@@ -113,7 +113,7 @@ class PreferencesItem(Gtk.ImageMenuItem):
         image = Gtk.Image.new_from_pixbuf(icon)
 
         self.set_image(image)
-        self.set_label('Preferences')
+        self.set_label('Settings')
 
         self.connect('activate', self.launch_preferences_dialog)
 
