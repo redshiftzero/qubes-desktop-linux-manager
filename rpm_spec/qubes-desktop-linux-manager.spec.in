@@ -23,11 +23,8 @@
 #
 #
 
-%{!?version: %define version %(cat version)}
-
-
 Name:       qubes-desktop-linux-manager
-Version:	%{version}
+Version:	@VERSION@
 Release:	1%{dist}
 Summary:	Qubes UI Applications
 
@@ -142,3 +139,6 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 /usr/share/applications/qubes-update-gui.desktop
 /usr/bin/widget-wrapper
 /lib/systemd/user/qubes-widget@.service
+
+%changelog
+@CHANGELOG@
