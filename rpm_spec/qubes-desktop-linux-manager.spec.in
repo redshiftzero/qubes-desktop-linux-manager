@@ -32,6 +32,7 @@ Group:		Qubes
 Vendor:		Invisible Things Lab
 License:	GPL
 URL:		http://www.qubes-os.org
+Source0:    %{name}-%{version}.tar.gz
 
 # because we have "#!/usr/bin/env python" shebangs, RPM puts
 # "Requires: $(which # python)" dependency, which, depending on $PATH order,
@@ -55,17 +56,11 @@ Provides:   qui = %{version}-%{release}
 Obsoletes:  qui < 4.0.0
 
 
-%define _builddir %(pwd)
-
 %description
 A collection of GUI application for enhancing the Qubes UX.
 
 %prep
-# we operate on the current directory, so no need to unpack anything
-# symlink is to generate useful debuginfo packages
-rm -f %{name}-%{version}
-ln -sf . %{name}-%{version}
-%setup -T -D
+%setup
 
 %build
 %py3_build
