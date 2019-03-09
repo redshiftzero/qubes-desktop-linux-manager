@@ -50,7 +50,7 @@ class DomainDecorator(PropertiesDecorator):
     def icon(self) -> Gtk.Image:
         ''' Returns a `Gtk.Image` containing the colored lock icon '''
         icon_vm = Gtk.IconTheme.get_default().load_icon(
-            self.vm.label.icon, 16, 0)
+            self.vm.icon, 16, 0)
         icon_img = Gtk.Image.new_from_pixbuf(icon_vm)
         return icon_img
 
@@ -65,7 +65,7 @@ class DomainDecorator(PropertiesDecorator):
         return label
 
 
-def device_hbox(device, frontend_domains=None) -> Gtk.Box:
+def device_hbox(device) -> Gtk.Box:
     ''' Returns a :class:`Gtk.Box` containing the device name & icon.. '''
     if device.devclass == 'block':
         icon = 'drive-removable-media'
@@ -78,11 +78,11 @@ def device_hbox(device, frontend_domains=None) -> Gtk.Box:
     dev_icon = create_icon(icon)
 
     name_label = Gtk.Label(xalign=0)
-    name = "{}:{} - {}".format(device.backend_domain.name, device.ident,
+    name = "{}:{} - {}".format(device.backend_domain, device.ident,
                                device.description)
-    if frontend_domains:
+    if device.attachments:
         name_label.set_markup('<b>{} ({})</b>'.format(
-            name, ", ".join([vm.name for vm in frontend_domains])))
+            name, ", ".join([vm for vm in device.attachments])))
     else:
         name_label.set_text(name)
     name_label.set_max_width_chars(64)
@@ -106,7 +106,7 @@ def device_domain_hbox(vm, attached: bool) -> Gtk.Box:
         add_icon = create_icon('list-add')
         hbox.pack_start(add_icon, False, False, 5)
 
-    name = Gtk.Label(vm.name, xalign=0)
+    name = Gtk.Label(vm, xalign=0)
     hbox.pack_start(name, True, True, 5)
     return hbox
 
