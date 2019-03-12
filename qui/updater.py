@@ -218,7 +218,7 @@ class QubesUpdater(Gtk.Application):
                 GObject.idle_add(
                     self.append_text_view,
                     "Error on updating {}: {}\n{}".format(
-                        row.vm.name, str(ex), ex.output))
+                        row.vm.name, str(ex), ex.output.decode()))
                 GObject.idle_add(row.set_status, 'failure')
 
         GObject.idle_add(self.next_button.set_sensitive, True)
