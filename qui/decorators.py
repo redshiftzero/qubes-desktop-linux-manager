@@ -106,7 +106,12 @@ def device_domain_hbox(vm, attached: bool) -> Gtk.Box:
         add_icon = create_icon('list-add')
         hbox.pack_start(add_icon, False, False, 5)
 
-    name = Gtk.Label(vm, xalign=0)
+    name = Gtk.Label(xalign=0)
+    if attached:
+        name.set_markup('<b>{}</b>'.format(vm.vm_name))
+    else:
+        name.set_text(vm.vm_name)
+
     hbox.pack_start(name, True, True, 5)
     return hbox
 
