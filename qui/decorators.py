@@ -49,8 +49,14 @@ class DomainDecorator(PropertiesDecorator):
 
     def icon(self) -> Gtk.Image:
         ''' Returns a `Gtk.Image` containing the colored lock icon '''
+        try:
+            # this is a temporary, emergency fix for unexecpected conflict with
+            # qui-devices rewrite
+            icon = self.vm.icon
+        except AttributeError:
+            icon = self.vm.label.icon
         icon_vm = Gtk.IconTheme.get_default().load_icon(
-            self.vm.icon, 16, 0)
+            icon, 16, 0)
         icon_img = Gtk.Image.new_from_pixbuf(icon_vm)
         return icon_img
 
