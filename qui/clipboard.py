@@ -132,6 +132,8 @@ class NotificationApp(Gtk.Application):
 
         self.icon = Gtk.StatusIcon()
         self.icon.set_from_icon_name('edit-copy')
+        self.icon.set_tooltip_markup('<b>Qubes Clipboard</b>\nInformation'
+                                     'about current state of Qubes Clipboard.')
         self.icon.connect('button-press-event', self.show_menu)
 
         self.menu = Gtk.Menu()
@@ -199,8 +201,8 @@ class NotificationApp(Gtk.Application):
         self.menu.append(Gtk.SeparatorMenuItem())
 
         help_label = Gtk.Label(xalign=0)
-        help_label.set_markup("<i>Use <b>Ctrl+Shift+V</b> to paste, "
-                              "<b>Ctrl+Shift+C</b> to copy.</i>")
+        help_label.set_markup("<i>Use <b>Ctrl+Shift+C</b> to copy, "
+                              "<b>Ctrl+Shift+V</b> to paste.</i>")
         help_item = Gtk.MenuItem()
         help_item.set_margin_left(10)
         help_item.set_sensitive(False)
