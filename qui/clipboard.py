@@ -132,7 +132,7 @@ class NotificationApp(Gtk.Application):
 
         self.icon = Gtk.StatusIcon()
         self.icon.set_from_icon_name('edit-copy')
-        self.icon.set_tooltip_markup('<b>Qubes Clipboard</b>\nInformation'
+        self.icon.set_tooltip_markup('<b>Qubes Clipboard</b>\nInformation '
                                      'about current state of Qubes Clipboard.')
         self.icon.connect('button-press-event', self.show_menu)
 
