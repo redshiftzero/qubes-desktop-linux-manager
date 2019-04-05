@@ -274,9 +274,17 @@ class DevicesTray(Gtk.Application):
 
     def vm_start(self, vm, _event, **_kwargs):
         self.vms.add(VM(vm))
+        for devclass in DEV_TYPES:
+            for device in vm.devices[devclass].attached():
+                dev = str(device)
+                if dev in self.devices:
+                    self.devices[dev].attachments.add(vm.name)
 
     def vm_shutdown(self, vm, _event, **_kwargs):
         self.vms.discard(vm)
+
+        for dev in self.devices.values():
+            dev.attachments.discard(str(vm))
 
     def on_label_changed(self, vm, _event, **_kwargs):
         if not vm:  # global properties changed
