@@ -113,7 +113,7 @@ class QubesUpdater(Gtk.Application):
                 self.vm_list.add(VMListBoxRow(vm, state))
 
         for vm in self.qapp.domains:
-            if getattr(vm, 'updateable', False):
+            if getattr(vm, 'updateable', False) and vm.klass != 'AdminVM':
                 state = vm.features.get('updates-available', False)
                 result = result or state
                 self.vm_list.add(VMListBoxRow(vm, state))
