@@ -14,5 +14,6 @@ They are run (and restarted on crash) by systemd services:
 - qubes-widget@qui-devices
 - qubes-widget@qui-disk-space
 - qubes-widget@qui-updates
+- qubes-widget@qui-clipboard
 
 In case of problems, you can view system log with `journalctl --user -u qubes-widget@[widget_name]`.
