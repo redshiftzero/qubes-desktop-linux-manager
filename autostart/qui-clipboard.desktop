@@ -1,6 +1,6 @@
 [Desktop Entry]
 Icon=edit-paste
-Name=Domains Tray
+Name=Clipboard Tray
 Categories=System;Monitor;
 Exec=systemctl --user start qubes-widget@qui-clipboard
 Terminal=false
