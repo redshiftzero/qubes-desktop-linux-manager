@@ -78,14 +78,13 @@ class DomainMenu(Gtk.Menu):
                 "Attaching {} to {}".format(self.device.description,
                                             menu_item.vm),
                 Gio.NotificationPriority.NORMAL)
-        except qubesadmin.exc.QubesException as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             self.gtk_app.emit_notification(
                 "Error",
-                "Attaching device {0} to {1} failed. Error: {2}".format(
-                    self.device.description, menu_item.vm, ex),
+                "Attaching device {0} to {1} failed. Error: {2} -{3}".format(
+                    self.device.description, menu_item.vm, type(ex), ex),
                 Gio.NotificationPriority.HIGH,
                 error=True)
-        except Exception:  # pylint: disable=broad-except
             traceback.print_exc(file=sys.stderr)
 
     def detach_item(self):
