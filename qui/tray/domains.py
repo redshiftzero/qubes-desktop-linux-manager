@@ -16,7 +16,7 @@ from qubesadmin import exc
 import qui.decorators
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
-from gi.repository import Gio, Gtk  # isort:skip
+from gi.repository import Gio, Gtk, Gdk  # isort:skip
 
 import gbulb
 gbulb.install()
@@ -228,14 +228,28 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         self.decorator = qui.decorators.DomainDecorator(vm)
 
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        # hbox.set_homogeneous(True)
+
+        namebox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+
         self.name = self.decorator.name()
-        hbox.pack_start(self.name, True, True, 0)
+        namebox.pack_start(self.name, True, True, 0)
 
         self.spinner = Gtk.Spinner()
-        hbox.pack_start(self.spinner, False, True, 0)
+        namebox.pack_start(self.spinner, False, True, 0)
+
+        hbox.pack_start(namebox, True, True, 0)
+
+        mem_cpu_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        # mem_cpu_box.set_homogeneous(True)
 
         self.memory = self.decorator.memory()
-        hbox.pack_start(self.memory, False, True, 0)
+        mem_cpu_box.pack_start(self.memory, False, True, 0)
+
+        self.cpu = self.decorator.cpu()
+        mem_cpu_box.pack_start(self.cpu, False, True, 0)
+
+        hbox.pack_start(mem_cpu_box, False, True, 0)
 
         self.add(hbox)
 
@@ -285,8 +299,8 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         self._set_submenu(state)
 
     def update_stats(self, memory_kb, cpu_usage):
-        text = '{0} MB, CPU:{1}%'.format(int(memory_kb)//1024, cpu_usage)
-        self.memory.set_text(text)
+        self.memory.update_state(int(memory_kb))
+        self.cpu.update_state(int(cpu_usage))
 
 
 class DomainTray(Gtk.Application):
@@ -313,9 +327,30 @@ class DomainTray(Gtk.Application):
         self.add_action(self.unpause_all_action)
         self.pause_notification_out = False
 
+        self.load_css()
+
         self.register_events()
         self.set_application_id(app_name)
         self.register()  # register Gtk Application
+
+    @staticmethod
+    def load_css():
+        style_provider = Gtk.CssProvider()
+        css = b'''
+        progress {        
+            min-height: 10px;
+        }
+        trough {
+            min-height: 10px;
+            border: 1px;
+        }
+        '''
+        style_provider.load_from_data(css)
+
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            style_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def register_events(self):
         self.dispatcher.add_handler('domain-pre-start', self.update_domain_item)
@@ -459,8 +494,8 @@ class DomainTray(Gtk.Application):
     def update_stats(self, vm, _event, **kwargs):
         if vm not in self.menu_items:
             return
-        self.menu_items[vm].update_stats(kwargs['memory_kb'],
-                kwargs['cpu_usage'])
+        self.menu_items[vm].update_stats(
+            kwargs['memory_kb'], kwargs['cpu_usage'])
 
     def initialize_menu(self):
         for vm in self.qapp.domains:

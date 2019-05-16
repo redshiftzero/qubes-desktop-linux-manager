@@ -40,12 +40,40 @@ class DomainDecorator(PropertiesDecorator):
         self.set_margins(label)
         return label
 
-    def memory(self, memory=0) -> Gtk.Label:
-        label = Gtk.Label(
-            str(int(memory / 1024)) + ' MB', xalign=0)
-        self.set_margins(label)
-        label.set_sensitive(False)
-        return label
+    class VMCPU(Gtk.Box):
+        def __init__(self):
+            super(DomainDecorator.VMCPU, self).__init__()
+            self.cpu_bar = Gtk.ProgressBar()
+            self.cpu_bar.set_show_text(True)
+            self.cpu_bar.set_text("CPU")
+            self.pack_start(self.cpu_bar, True, True, 0)
+
+        def update_state(self, cpu=0):
+            self.cpu_bar.set_fraction(cpu/100)
+            self.cpu_bar.set_text("{}% CPU".format(cpu))
+
+    class VMMem(Gtk.Box):
+        def __init__(self):
+            super(DomainDecorator.VMMem, self).__init__()
+            self.mem_label = Gtk.Label(xalign=1)
+            self.pack_start(self.mem_label, True, True, 0)
+
+        def update_state(self, memory=0):
+            self.mem_label.set_markup(
+                '{} MB'.format(str(int(memory/1024))))
+
+    def memory(self):
+        mem_widget = DomainDecorator.VMMem()
+        self.set_margins(mem_widget)
+
+        return mem_widget
+
+    def cpu(self):
+        cpu_widget = DomainDecorator.VMCPU()
+        self.set_margins(cpu_widget)
+
+        return cpu_widget
+
 
     def icon(self) -> Gtk.Image:
         ''' Returns a `Gtk.Image` containing the colored lock icon '''
