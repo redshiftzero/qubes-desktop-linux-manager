@@ -45,17 +45,17 @@ class DomainDecorator(PropertiesDecorator):
             super(DomainDecorator.VMCPU, self).__init__()
             
             self.cpu_label = Gtk.Label(xalign=1)
-            self.cpu_label.set_markup(' {:3d}% '.format(0))
-            self.pack_start(self.cpu_label, False, True, 0)
+            self.cpu_label.set_width_chars(4)
+            self.cpu_label.set_markup('{:3d}%'.format(0))
+            self.pack_start(self.cpu_label, True, True, 5)
             
             self.cpu_bar = Gtk.ProgressBar()
             self.cpu_bar.set_show_text(False)
-            self.pack_start(self.cpu_bar, False, True, 0)
+            self.pack_start(self.cpu_bar, True, True, 0)
 
         def update_state(self, cpu=0):
-            self.cpu_label.set_markup(' {:3d}% '.format(cpu))
+            self.cpu_label.set_markup('{:3d}%'.format(cpu))
             self.cpu_bar.set_fraction(cpu/100)
-            #self.cpu_bar.set_text("{}% CPU".format(cpu))
 
     class VMMem(Gtk.Box):
         def __init__(self):
