@@ -338,10 +338,10 @@ class DomainTray(Gtk.Application):
         style_provider = Gtk.CssProvider()
         css = b'''
         progress {        
-            min-height: 10px;
+            min-height: 15px;
         }
         trough {
-            min-height: 10px;
+            min-height: 15px;
             border: 1px;
         }
         '''
