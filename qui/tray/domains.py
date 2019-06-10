@@ -345,6 +345,8 @@ class DomainTray(Gtk.Application):
                                     self.feature_change)
         self.dispatcher.add_handler('domain-feature-delete:updates-available',
                                     self.feature_change)
+        self.dispatcher.add_handler('property-set:netvm',
+                                    self.property_change)
 
         self.stats_dispatcher.add_handler('vm-stats', self.update_stats)
 
@@ -353,6 +355,7 @@ class DomainTray(Gtk.Application):
         for vm in sorted(self.menu_items):
             self.tray_menu.remove(self.menu_items[vm])
             menu.add(self.menu_items[vm])
+            self.menu_items[vm].name.update_tooltip(storage_changed=True)
         menu.add(Gtk.SeparatorMenuItem())
         menu.add(QubesManagerItem())
         menu.show_all()
@@ -442,6 +445,11 @@ class DomainTray(Gtk.Application):
             position += 1
         self.tray_menu.insert(domain_item, position)
         self.menu_items[vm] = domain_item
+
+    def property_change(self, vm, *_args, **_kwargs):
+        if vm not in self.menu_items:
+            return
+        self.menu_items[vm].name.update_tooltip(netvm_changed=True)
 
     def feature_change(self, vm, *_args, **_kwargs):
         if vm not in self.menu_items:
