@@ -35,10 +35,39 @@ class DomainDecorator(PropertiesDecorator):
         super(DomainDecorator, self).__init__(vm, margins)
         self.vm = vm
 
+    class VMName(Gtk.Box):
+        def __init__(self, vm):
+            super(DomainDecorator.VMName, self).__init__()
+            self.vm = vm
+            self.label = Gtk.Label(self.vm.name, xalign=0)
+            self.pack_start(self.label, False, False, 0)
+
+            self.outdated_icon = create_icon('outdated')
+            self.updateable_icon = create_icon('software-update-available')
+
+            self.outdated_icon.set_no_show_all(True)
+            self.updateable_icon.set_no_show_all(True)
+
+            self.updateable_icon.set_tooltip_text("Updates available")
+            self.outdated_icon.set_tooltip_text(
+                "Qube must be restarted to reflect changes in template")
+
+            self.update_outdated(False)
+            self.update_updateable()
+
+            self.pack_start(self.outdated_icon, False, False, 3)
+            self.pack_start(self.updateable_icon, False, True, 3)
+
+        def update_outdated(self, state):
+            self.outdated_icon.set_visible(state)
+
+        def update_updateable(self):
+            updates_state = self.vm.features.get('updates-available', False)
+            self.updateable_icon.set_visible(updates_state)
+
     def name(self):
-        label = Gtk.Label(self.vm.name, xalign=0)
-        self.set_margins(label)
-        return label
+        namebox = DomainDecorator.VMName(self.vm)
+        return namebox
 
     def memory(self, memory=0) -> Gtk.Label:
         label = Gtk.Label(
