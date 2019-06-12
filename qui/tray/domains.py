@@ -223,7 +223,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         super().__init__()
         self.vm = vm
         # set vm := None to make this a header row
-        # that mimics the layout of rows describing actual VMs
+        # to mimic the layout of rows describing actual VMs
         
         self.decorator = qui.decorators.DomainDecorator(vm)
 
@@ -231,36 +231,31 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         # hbox.set_homogeneous(True)
 
         namebox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-
         self.name = self.decorator.name()
         namebox.pack_start(self.name, True, True, 0)
-
         self.spinner = Gtk.Spinner()
         namebox.pack_start(self.spinner, False, True, 0)
-
+        
         hbox.pack_start(namebox, True, True, 0)
 
         mem_cpu_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         # mem_cpu_box.set_homogeneous(True)
-
         self.memory = self.decorator.memory()
         mem_cpu_box.pack_start(self.memory, False, True, 0)
-
         self.cpu = self.decorator.cpu()
         mem_cpu_box.pack_start(self.cpu, False, True, 0)
-
+        
         hbox.pack_start(mem_cpu_box, False, True, 0)
 
         self.add(hbox)
 
         if self.vm is None:
-            self.set_submenu(Gtk.Menu())  # empty for now, for spacing
+            self.set_reserve_indicator(True)  # to align with submenu indicators below
             self.cpu.update_state(header=True)
             self.memory.update_state(header=True)
         else:
             self.update_state(self.vm.get_power_state())
-            
-        self._set_image()
+            self._set_image()
 
     def _set_image(self):
         self.set_image(self.decorator.icon())

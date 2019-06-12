@@ -73,7 +73,7 @@ class DomainDecorator(PropertiesDecorator):
 
         def update_state(self, memory=0, header=False):
             if header:
-                markup = '<b>Memory</b>'
+                markup = '<b>RAM</b>'
             else:
                 markup = '{} MB'.format(str(int(memory/1024)))
                 
