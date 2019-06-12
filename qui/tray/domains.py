@@ -155,7 +155,6 @@ class RunTerminalItem(Gtk.ImageMenuItem):
     def run_terminal(self, _item):
         self.vm.run_service('qubes.StartApp+qubes-run-terminal')
 
-
 class StartedMenu(Gtk.Menu):
     ''' The sub-menu for a started domain'''
 
@@ -219,12 +218,13 @@ class QubesManagerItem(Gtk.ImageMenuItem):
 
         self.connect('activate', run_manager)
 
-
 class DomainMenuItem(Gtk.ImageMenuItem):
     def __init__(self, vm):
         super().__init__()
         self.vm = vm
-
+        # set vm := None to make this a header row
+        # that mimics the layout of rows describing actual VMs
+        
         self.decorator = qui.decorators.DomainDecorator(vm)
 
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -253,7 +253,11 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
         self.add(hbox)
 
-        self.update_state(self.vm.get_power_state())
+        if self.vm is None:
+            self.set_submenu(Gtk.Menu())  # empty for now, for spacing
+        else:
+            self.update_state(self.vm.get_power_state())
+            
         self._set_image()
 
     def _set_image(self):
@@ -286,6 +290,10 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         self.spinner.hide()
 
     def update_state(self, state):
+        
+        if self.vm is None:
+            return
+        
         if state in ['Running', 'Paused']:
             self.hide_spinner()
         else:
@@ -296,6 +304,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
                 colormap[state], self.vm.name))
         else:
             self.name.set_label(self.vm.name)
+        
         self._set_submenu(state)
 
     def update_stats(self, memory_kb, cpu_usage):
@@ -380,6 +389,7 @@ class DomainTray(Gtk.Application):
 
     def show_menu(self, _, event):
         menu = Gtk.Menu()
+        menu.add(DomainMenuItem(None))
         for vm in sorted(self.menu_items):
             self.tray_menu.remove(self.menu_items[vm])
             menu.add(self.menu_items[vm])
@@ -467,7 +477,7 @@ class DomainTray(Gtk.Application):
         domain_item = DomainMenuItem(vm)
         position = 0
         for i in self.tray_menu:  # pylint: disable=not-an-iterable
-            if not hasattr(i, 'vm') or i.vm.name > vm.name:
+            if not hasattr(i, 'vm') or (i.vm is not None and i.vm.name > vm.name):
                 break
             position += 1
         self.tray_menu.insert(domain_item, position)

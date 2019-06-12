@@ -31,12 +31,13 @@ class PropertiesDecorator():
 class DomainDecorator(PropertiesDecorator):
     ''' Useful methods for domain data representation '''
 
-    def __init__(self, vm: qubesadmin.vm.QubesVM, margins=(5, 5)) -> None:
+    def __init__(self, vm, margins=(5, 5)) -> None:
         super(DomainDecorator, self).__init__(vm, margins)
         self.vm = vm
 
     def name(self):
-        label = Gtk.Label(self.vm.name, xalign=0)
+        label = Gtk.Label(xalign=0)
+        label.set_markup('<b>Active qube</b>')
         self.set_margins(label)
         return label
 
@@ -45,22 +46,27 @@ class DomainDecorator(PropertiesDecorator):
             super(DomainDecorator.VMCPU, self).__init__()
             
             self.cpu_label = Gtk.Label(xalign=1)
-            self.cpu_label.set_width_chars(4)
-            self.cpu_label.set_markup('{:3d}%'.format(0))
-            self.pack_start(self.cpu_label, True, True, 5)
+            self.cpu_label.set_width_chars(6)
+            self.cpu_label.set_markup('<b>CPU</b>')
+            self.pack_start(self.cpu_label, True, True, 0)
             
-            self.cpu_bar = Gtk.ProgressBar()
-            self.cpu_bar.set_show_text(False)
-            self.pack_start(self.cpu_bar, True, True, 0)
+            #self.cpu_bar = Gtk.ProgressBar()
+            #self.cpu_bar.set_show_text(False)
+            #self.pack_start(self.cpu_bar, True, True, 0)
 
         def update_state(self, cpu=0):
-            self.cpu_label.set_markup('{:3d}%'.format(cpu))
-            self.cpu_bar.set_fraction(cpu/100)
+            if cpu > 0:
+                self.cpu_label.set_markup('{:3d}%'.format(cpu))
+            else:
+                self.cpu_label.set_markup('')
+                
+            #self.cpu_bar.set_fraction(cpu/100)
 
     class VMMem(Gtk.Box):
         def __init__(self):
             super(DomainDecorator.VMMem, self).__init__()
             self.mem_label = Gtk.Label(xalign=1)
+            self.mem_label.set_markup('<b>Memory</b>')
             self.pack_start(self.mem_label, True, True, 0)
 
         def update_state(self, memory=0):
@@ -82,6 +88,8 @@ class DomainDecorator(PropertiesDecorator):
 
     def icon(self) -> Gtk.Image:
         ''' Returns a `Gtk.Image` containing the colored lock icon '''
+        if self.vm is None:   # should not be called
+            return None
         try:
             # this is a temporary, emergency fix for unexecpected conflict with
             # qui-devices rewrite
