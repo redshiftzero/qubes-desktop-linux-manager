@@ -255,6 +255,8 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
         if self.vm is None:
             self.set_submenu(Gtk.Menu())  # empty for now, for spacing
+            self.cpu.update_state(header=True)
+            self.memory.update_state(header=True)
         else:
             self.update_state(self.vm.get_power_state())
             
