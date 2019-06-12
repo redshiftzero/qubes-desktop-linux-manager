@@ -222,8 +222,9 @@ class DomainMenuItem(Gtk.ImageMenuItem):
     def __init__(self, vm):
         super().__init__()
         self.vm = vm
-        # set vm := None to make this a header row
-        # to mimic the layout of rows describing actual VMs
+        # set vm := None to make this output headers.
+        # Header menu item reuses the domain menu item code
+        #   so headers are aligned with the columns.
         
         self.decorator = qui.decorators.DomainDecorator(vm)
 
@@ -235,7 +236,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         namebox.pack_start(self.name, True, True, 0)
         self.spinner = Gtk.Spinner()
         namebox.pack_start(self.spinner, False, True, 0)
-        
+
         hbox.pack_start(namebox, True, True, 0)
 
         mem_cpu_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -244,13 +245,13 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         mem_cpu_box.pack_start(self.memory, False, True, 0)
         self.cpu = self.decorator.cpu()
         mem_cpu_box.pack_start(self.cpu, False, True, 0)
-        
+
         hbox.pack_start(mem_cpu_box, False, True, 0)
 
         self.add(hbox)
 
-        if self.vm is None:
-            self.set_reserve_indicator(True)  # to align with submenu indicators below
+        if self.vm is None:  # if header
+            self.set_reserve_indicator(True)  # align with submenu triangles
             self.cpu.update_state(header=True)
             self.memory.update_state(header=True)
         else:
