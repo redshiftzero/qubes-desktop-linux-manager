@@ -334,30 +334,9 @@ class DomainTray(Gtk.Application):
         self.add_action(self.unpause_all_action)
         self.pause_notification_out = False
 
-        self.load_css()
-
         self.register_events()
         self.set_application_id(app_name)
         self.register()  # register Gtk Application
-
-    @staticmethod
-    def load_css():
-        style_provider = Gtk.CssProvider()
-        css = b'''
-        progress {        
-            min-height: 15px;
-        }
-        trough {
-            min-height: 15px;
-            border: 1px;
-        }
-        '''
-        style_provider.load_from_data(css)
-
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            style_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def register_events(self):
         self.dispatcher.add_handler('domain-pre-start', self.update_domain_item)

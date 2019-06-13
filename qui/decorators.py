@@ -48,10 +48,6 @@ class DomainDecorator(PropertiesDecorator):
             self.cpu_label = Gtk.Label(xalign=1)
             self.cpu_label.set_width_chars(6)
             self.pack_start(self.cpu_label, True, True, 0)
-            
-            #self.cpu_bar = Gtk.ProgressBar()
-            #self.cpu_bar.set_show_text(False)
-            #self.pack_start(self.cpu_bar, True, True, 0)
 
         def update_state(self, cpu=0, header=False):
             if header:
@@ -62,8 +58,6 @@ class DomainDecorator(PropertiesDecorator):
                 markup = ''
             
             self.cpu_label.set_markup(markup)
-                
-            #self.cpu_bar.set_fraction(cpu/100)
 
     class VMMem(Gtk.Box):
         def __init__(self):
