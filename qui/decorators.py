@@ -4,7 +4,6 @@ containing helpful representation methods.
 '''
 # pylint: disable=wrong-import-position,import-error
 
-import qubesadmin
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gtk, Pango  # isort:skip
@@ -44,7 +43,7 @@ class DomainDecorator(PropertiesDecorator):
     class VMCPU(Gtk.Box):
         def __init__(self):
             super(DomainDecorator.VMCPU, self).__init__()
-            
+
             self.cpu_label = Gtk.Label(xalign=1)
             self.cpu_label.set_width_chars(6)
             self.pack_start(self.cpu_label, True, True, 0)
@@ -56,7 +55,7 @@ class DomainDecorator(PropertiesDecorator):
                 markup = '{:3d}%'.format(cpu)
             else:
                 markup = ''
-            
+
             self.cpu_label.set_markup(markup)
 
     class VMMem(Gtk.Box):
@@ -70,7 +69,7 @@ class DomainDecorator(PropertiesDecorator):
                 markup = '<b>RAM</b>'
             else:
                 markup = '{} MB'.format(str(int(memory/1024)))
-                
+
             self.mem_label.set_markup(markup)
 
     def memory(self):
