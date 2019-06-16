@@ -4,7 +4,6 @@ containing helpful representation methods.
 '''
 # pylint: disable=wrong-import-position,import-error
 
-import qubesadmin
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gtk, Pango  # isort:skip
@@ -31,26 +30,33 @@ class PropertiesDecorator():
 class DomainDecorator(PropertiesDecorator):
     ''' Useful methods for domain data representation '''
 
-    def __init__(self, vm: qubesadmin.vm.QubesVM, margins=(5, 5)) -> None:
+    def __init__(self, vm, margins=(5, 5)) -> None:
         super(DomainDecorator, self).__init__(vm, margins)
         self.vm = vm
 
     def name(self):
-        label = Gtk.Label(self.vm.name, xalign=0)
+        label = Gtk.Label(xalign=0)
+        label.set_markup('<b>Qube</b>')
         self.set_margins(label)
         return label
 
     class VMCPU(Gtk.Box):
         def __init__(self):
             super(DomainDecorator.VMCPU, self).__init__()
-            self.cpu_bar = Gtk.ProgressBar()
-            self.cpu_bar.set_show_text(True)
-            self.cpu_bar.set_text("CPU")
-            self.pack_start(self.cpu_bar, True, True, 0)
 
-        def update_state(self, cpu=0):
-            self.cpu_bar.set_fraction(cpu/100)
-            self.cpu_bar.set_text("{}% CPU".format(cpu))
+            self.cpu_label = Gtk.Label(xalign=1)
+            self.cpu_label.set_width_chars(6)
+            self.pack_start(self.cpu_label, True, True, 0)
+
+        def update_state(self, cpu=0, header=False):
+            if header:
+                markup = '<b>CPU</b>'
+            elif cpu > 0:
+                markup = '{:3d}%'.format(cpu)
+            else:
+                markup = ''
+
+            self.cpu_label.set_markup(markup)
 
     class VMMem(Gtk.Box):
         def __init__(self):
@@ -58,9 +64,13 @@ class DomainDecorator(PropertiesDecorator):
             self.mem_label = Gtk.Label(xalign=1)
             self.pack_start(self.mem_label, True, True, 0)
 
-        def update_state(self, memory=0):
-            self.mem_label.set_markup(
-                '{} MB'.format(str(int(memory/1024))))
+        def update_state(self, memory=0, header=False):
+            if header:
+                markup = '<b>RAM</b>'
+            else:
+                markup = '{} MB'.format(str(int(memory/1024)))
+
+            self.mem_label.set_markup(markup)
 
     def memory(self):
         mem_widget = DomainDecorator.VMMem()
@@ -77,6 +87,8 @@ class DomainDecorator(PropertiesDecorator):
 
     def icon(self) -> Gtk.Image:
         ''' Returns a `Gtk.Image` containing the colored lock icon '''
+        if self.vm is None:   # should not be called
+            return None
         try:
             # this is a temporary, emergency fix for unexecpected conflict with
             # qui-devices rewrite

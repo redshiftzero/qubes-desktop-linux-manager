@@ -16,7 +16,7 @@ from qubesadmin import exc
 import qui.decorators
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
-from gi.repository import Gio, Gtk, Gdk  # isort:skip
+from gi.repository import Gio, Gtk  # isort:skip
 
 import gbulb
 gbulb.install()
@@ -155,7 +155,6 @@ class RunTerminalItem(Gtk.ImageMenuItem):
     def run_terminal(self, _item):
         self.vm.run_service('qubes.StartApp+qubes-run-terminal')
 
-
 class StartedMenu(Gtk.Menu):
     ''' The sub-menu for a started domain'''
 
@@ -219,11 +218,13 @@ class QubesManagerItem(Gtk.ImageMenuItem):
 
         self.connect('activate', run_manager)
 
-
 class DomainMenuItem(Gtk.ImageMenuItem):
     def __init__(self, vm):
         super().__init__()
         self.vm = vm
+        # set vm := None to make this output headers.
+        # Header menu item reuses the domain menu item code
+        #   so headers are aligned with the columns.
 
         self.decorator = qui.decorators.DomainDecorator(vm)
 
@@ -231,10 +232,8 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         # hbox.set_homogeneous(True)
 
         namebox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-
         self.name = self.decorator.name()
         namebox.pack_start(self.name, True, True, 0)
-
         self.spinner = Gtk.Spinner()
         namebox.pack_start(self.spinner, False, True, 0)
 
@@ -242,10 +241,8 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
         mem_cpu_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         # mem_cpu_box.set_homogeneous(True)
-
         self.memory = self.decorator.memory()
         mem_cpu_box.pack_start(self.memory, False, True, 0)
-
         self.cpu = self.decorator.cpu()
         mem_cpu_box.pack_start(self.cpu, False, True, 0)
 
@@ -253,8 +250,13 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
         self.add(hbox)
 
-        self.update_state(self.vm.get_power_state())
-        self._set_image()
+        if self.vm is None:  # if header
+            self.set_reserve_indicator(True)  # align with submenu triangles
+            self.cpu.update_state(header=True)
+            self.memory.update_state(header=True)
+        else:
+            self.update_state(self.vm.get_power_state())
+            self._set_image()
 
     def _set_image(self):
         self.set_image(self.decorator.icon())
@@ -286,6 +288,10 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         self.spinner.hide()
 
     def update_state(self, state):
+
+        if self.vm is None:
+            return
+
         if state in ['Running', 'Paused']:
             self.hide_spinner()
         else:
@@ -296,6 +302,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
                 colormap[state], self.vm.name))
         else:
             self.name.set_label(self.vm.name)
+
         self._set_submenu(state)
 
     def update_stats(self, memory_kb, cpu_usage):
@@ -327,30 +334,9 @@ class DomainTray(Gtk.Application):
         self.add_action(self.unpause_all_action)
         self.pause_notification_out = False
 
-        self.load_css()
-
         self.register_events()
         self.set_application_id(app_name)
         self.register()  # register Gtk Application
-
-    @staticmethod
-    def load_css():
-        style_provider = Gtk.CssProvider()
-        css = b'''
-        progress {        
-            min-height: 10px;
-        }
-        trough {
-            min-height: 10px;
-            border: 1px;
-        }
-        '''
-        style_provider.load_from_data(css)
-
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            style_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def register_events(self):
         self.dispatcher.add_handler('domain-pre-start', self.update_domain_item)
@@ -380,6 +366,7 @@ class DomainTray(Gtk.Application):
 
     def show_menu(self, _, event):
         menu = Gtk.Menu()
+        menu.add(DomainMenuItem(None))
         for vm in sorted(self.menu_items):
             self.tray_menu.remove(self.menu_items[vm])
             menu.add(self.menu_items[vm])
@@ -467,7 +454,8 @@ class DomainTray(Gtk.Application):
         domain_item = DomainMenuItem(vm)
         position = 0
         for i in self.tray_menu:  # pylint: disable=not-an-iterable
-            if not hasattr(i, 'vm') or i.vm.name > vm.name:
+            if not hasattr(i, 'vm') \
+               or (i.vm is not None and i.vm.name > vm.name):
                 break
             position += 1
         self.tray_menu.insert(domain_item, position)
