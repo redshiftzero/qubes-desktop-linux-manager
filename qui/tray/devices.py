@@ -32,12 +32,15 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         self.vm = vm
 
         self.device = device
-        self.attached = vm in device.attachments
 
         icon = self.vm.icon
         self.set_image(qui.decorators.create_icon(icon))
         self._hbox = qui.decorators.device_domain_hbox(self.vm, self.attached)
         self.add(self._hbox)
+
+    @property
+    def attached(self):
+        return str(self.vm) in self.device.attachments
 
 
 class DomainMenu(Gtk.Menu):
@@ -70,7 +73,7 @@ class DomainMenu(Gtk.Menu):
             assignment = qubesadmin.devices.DeviceAssignment(
                 self.device.backend_domain, self.device.ident, persistent=False)
 
-            vm_to_attach = self.qapp.domains[menu_item.vm]
+            vm_to_attach = self.qapp.domains[str(menu_item.vm)]
             vm_to_attach.devices[menu_item.device.devclass].attach(assignment)
 
             self.gtk_app.emit_notification(
@@ -81,8 +84,9 @@ class DomainMenu(Gtk.Menu):
         except Exception as ex:  # pylint: disable=broad-except
             self.gtk_app.emit_notification(
                 "Error",
-                "Attaching device {0} to {1} failed. Error: {2} -{3}".format(
-                    self.device.description, menu_item.vm, type(ex), ex),
+                "Attaching device {0} to {1} failed. Error: {2} - {3}".format(
+                    self.device.description, menu_item.vm, type(ex).__name__,
+                    ex),
                 Gio.NotificationPriority.HIGH,
                 error=True)
             traceback.print_exc(file=sys.stderr)
