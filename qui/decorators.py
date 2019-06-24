@@ -34,11 +34,103 @@ class DomainDecorator(PropertiesDecorator):
         super(DomainDecorator, self).__init__(vm, margins)
         self.vm = vm
 
+    class VMName(Gtk.Box):
+        def __init__(self, vm):
+            super(DomainDecorator.VMName, self).__init__()
+            self.vm = vm
+
+            self.template_name = None
+            self.netvm_name = None
+            self.cur_storage = None
+            self.max_storage = None
+
+            self.updates_available = False
+            self.outdated = False
+
+            self.label = Gtk.Label(xalign=0)
+            if self.vm:
+                self.label.set_label(self.vm.name)
+            else:
+                self.label.set_markup('<b>Qube</b>')
+            self.pack_start(self.label, False, False, 0)
+
+            self.outdated_icon = create_icon('outdated')
+            self.updateable_icon = create_icon('software-update-available')
+
+            self.outdated_icon.set_no_show_all(True)
+            self.updateable_icon.set_no_show_all(True)
+
+            self.updateable_icon.set_tooltip_text("Updates available")
+            self.outdated_icon.set_tooltip_text(
+                "Qube must be restarted to reflect changes in template")
+
+            self.update_outdated(False)
+            self.update_updateable()
+
+            self.pack_start(self.outdated_icon, False, False, 3)
+            self.pack_start(self.updateable_icon, False, True, 3)
+
+        def update_outdated(self, state):
+            self.outdated_icon.set_visible(state)
+            self.outdated = state
+            self.update_tooltip()
+
+        def update_updateable(self):
+            if self.vm is None:
+                return
+            updates_state = self.vm.features.get('updates-available', False)
+            self.updateable_icon.set_visible(updates_state)
+            self.updates_available = updates_state
+            self.update_tooltip()
+
+        def update_tooltip(self,
+                           netvm_changed=False,
+                           storage_changed=False):
+
+            if self.vm is None:
+                return
+
+            if not self.template_name:
+                self.template_name = getattr(self.vm, 'template', None)
+                self.template_name = "None" if not self.template_name \
+                    else str(self.template_name)
+
+            if not self.netvm_name or netvm_changed:
+                self.netvm_name = getattr(self.vm, 'netvm', None)
+                self.netvm_name = "None" if not self.netvm_name \
+                    else str(self.netvm_name)
+
+            if not self.cur_storage or storage_changed:
+                self.cur_storage = self.vm.get_disk_utilization() / 1024 ** 3
+
+            if not self.max_storage or storage_changed:
+                self.max_storage = self.vm.volumes['private'].size / 1024 ** 3
+
+            tooltip = \
+                "<b>{vmname}</b>\n" \
+                "Template: <b>{template}</b>\n" \
+                "Networking: <b>{netvm}</b>\n" \
+                "Private storage: <b>{current_storage:.2f}GB/" \
+                "{max_storage:.2f}GB ({perc_storage:.1%})</b>".format(
+                    vmname=self.vm.name,
+                    template=self.template_name,
+                    netvm=self.netvm_name,
+                    current_storage=self.cur_storage,
+                    max_storage=self.max_storage,
+                    perc_storage=self.cur_storage / self.max_storage)
+
+            if self.outdated:
+                tooltip += "\n\nRestart qube to " \
+                                  "apply changes in template."
+
+            if self.updates_available:
+                tooltip += "\n\nUpdates available."
+
+            self.label.set_tooltip_markup(tooltip)
+
     def name(self):
-        label = Gtk.Label(xalign=0)
-        label.set_markup('<b>Qube</b>')
-        self.set_margins(label)
-        return label
+        namebox = DomainDecorator.VMName(self.vm)
+        return namebox
 
     class VMCPU(Gtk.Box):
         def __init__(self):

@@ -298,11 +298,10 @@ class DomainMenuItem(Gtk.ImageMenuItem):
             self.show_spinner()
         colormap = {'Paused': 'grey', 'Crashed': 'red', 'Transient': 'red'}
         if state in colormap:
-            self.name.set_markup('<span color=\'{}\'>{}</span>'.format(
+            self.name.label.set_markup('<span color=\'{}\'>{}</span>'.format(
                 colormap[state], self.vm.name))
         else:
-            self.name.set_label(self.vm.name)
-
+            self.name.label.set_label(self.vm.name)
         self._set_submenu(state)
 
     def update_stats(self, memory_kb, cpu_usage):
@@ -362,6 +361,13 @@ class DomainTray(Gtk.Application):
         self.dispatcher.add_handler('domain-stopped', self.check_pause_notify)
         self.dispatcher.add_handler('domain-shutdown', self.check_pause_notify)
 
+        self.dispatcher.add_handler('domain-feature-set:updates-available',
+                                    self.feature_change)
+        self.dispatcher.add_handler('domain-feature-delete:updates-available',
+                                    self.feature_change)
+        self.dispatcher.add_handler('property-set:netvm',
+                                    self.property_change)
+
         self.stats_dispatcher.add_handler('vm-stats', self.update_stats)
 
     def show_menu(self, _, event):
@@ -370,6 +376,7 @@ class DomainTray(Gtk.Application):
         for vm in sorted(self.menu_items):
             self.tray_menu.remove(self.menu_items[vm])
             menu.add(self.menu_items[vm])
+            self.menu_items[vm].name.update_tooltip(storage_changed=True)
         menu.add(Gtk.SeparatorMenuItem())
         menu.add(QubesManagerItem())
         menu.show_all()
@@ -461,8 +468,21 @@ class DomainTray(Gtk.Application):
         self.tray_menu.insert(domain_item, position)
         self.menu_items[vm] = domain_item
 
+    def property_change(self, vm, *_args, **_kwargs):
+        if vm not in self.menu_items:
+            return
+        self.menu_items[vm].name.update_tooltip(netvm_changed=True)
+
+    def feature_change(self, vm, *_args, **_kwargs):
+        if vm not in self.menu_items:
+            return
+        self.menu_items[vm].name.update_updateable()
+
     def remove_domain_item(self, vm, _event, **_kwargs):
         ''' Remove the menu item for the specified domain from the tray'''
+        for item in self.menu_items.values():
+            if getattr(item.vm, 'template', None) == vm:
+                item.name.update_outdated(True)
         if vm not in self.menu_items:
             return
         vm_widget = self.menu_items[vm]
