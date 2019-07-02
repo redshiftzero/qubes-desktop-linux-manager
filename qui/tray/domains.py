@@ -345,11 +345,6 @@ class DomainTray(Gtk.Application):
         self.set_application_id(app_name)
         self.register()  # register Gtk Application
 
-        #qapp.log.warning(qapp.domains.keys())
-        # manually insert dom0, since too late for domain-start event
-        self.update_domain_item(qapp.domains['dom0'], '')
-
-
     def register_events(self):
         self.dispatcher.add_handler('domain-pre-start', self.update_domain_item)
         self.dispatcher.add_handler('domain-start', self.update_domain_item)
@@ -386,7 +381,9 @@ class DomainTray(Gtk.Application):
     def show_menu(self, _, event):
         menu = Gtk.Menu()
         menu.add(DomainMenuItem(None))
-        for vm in sorted(self.menu_items):
+        # sort dom0 first
+        for vm in sorted(self.menu_items,
+                         key=lambda vm: ' ' if vm.name == 'dom0' else vm.name):
             self.tray_menu.remove(self.menu_items[vm])
             menu.add(self.menu_items[vm])
             self.menu_items[vm].name.update_tooltip(storage_changed=True)
@@ -474,8 +471,11 @@ class DomainTray(Gtk.Application):
         domain_item = DomainMenuItem(vm)
         position = 0
         for i in self.tray_menu:  # pylint: disable=not-an-iterable
-            if not hasattr(i, 'vm') \
-               or (i.vm is not None and i.vm.name > vm.name):
+            if not hasattr(i, 'vm'):   # insert here if last menu item
+                break
+            if i.vm is not None and vm.name == 'dom0':  # dom0 goes before first vm
+                break
+            if i.vm is not None and i.vm.name != 'dom0' and i.vm.name > vm.name:
                 break
             position += 1
         self.tray_menu.insert(domain_item, position)
@@ -520,7 +520,7 @@ class DomainTray(Gtk.Application):
 
     def initialize_menu(self):
         for vm in self.qapp.domains:
-            if vm.is_running() and vm.klass != 'AdminVM':
+            if vm.is_running():
                 self.add_domain_item(vm, None)
         self.connect('shutdown', self._disconnect_signals)
 
