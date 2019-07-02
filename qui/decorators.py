@@ -90,6 +90,9 @@ class DomainDecorator(PropertiesDecorator):
             if self.vm is None:
                 return
 
+            if self.vm.name == 'dom0':
+                return
+
             if not self.template_name:
                 self.template_name = getattr(self.vm, 'template', None)
                 self.template_name = "None" if not self.template_name \

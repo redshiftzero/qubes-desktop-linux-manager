@@ -254,6 +254,8 @@ class DomainMenuItem(Gtk.ImageMenuItem):
             self.set_reserve_indicator(True)  # align with submenu triangles
             self.cpu.update_state(header=True)
             self.memory.update_state(header=True)
+        elif self.vm.name == 'dom0':  # no submenu for dom0
+            self.set_reserve_indicator(True)  # align with submenu triangles
         else:
             self.update_state(self.vm.get_power_state())
             self._set_image()
@@ -292,6 +294,11 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         if self.vm is None:
             return
 
+        # dom0 will always be running
+        # dom0 does not have submenu items
+        if self.vm.name == 'dom0':
+            return
+
         if state in ['Running', 'Paused']:
             self.hide_spinner()
         else:
@@ -302,6 +309,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
                 colormap[state], self.vm.name))
         else:
             self.name.label.set_label(self.vm.name)
+
         self._set_submenu(state)
 
     def update_stats(self, memory_kb, cpu_usage):
@@ -336,6 +344,11 @@ class DomainTray(Gtk.Application):
         self.register_events()
         self.set_application_id(app_name)
         self.register()  # register Gtk Application
+
+        #qapp.log.warning(qapp.domains.keys())
+        # manually insert dom0, since too late for domain-start event
+        self.update_domain_item(qapp.domains['dom0'], '')
+
 
     def register_events(self):
         self.dispatcher.add_handler('domain-pre-start', self.update_domain_item)
