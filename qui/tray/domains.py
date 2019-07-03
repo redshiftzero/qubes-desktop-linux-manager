@@ -254,7 +254,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
             self.set_reserve_indicator(True)  # align with submenu triangles
             self.cpu.update_state(header=True)
             self.memory.update_state(header=True)
-        elif self.vm.name == 'dom0':  # no submenu for dom0
+        elif self.vm.klass == 'AdminVM':  # no submenu for AdminVM
             self.set_reserve_indicator(True)  # align with submenu triangles
         else:
             self.update_state(self.vm.get_power_state())
@@ -294,9 +294,8 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         if self.vm is None:
             return
 
-        # dom0 will always be running
-        # dom0 does not have submenu items
-        if self.vm.name == 'dom0':
+        # AdminVM does not have submenu items
+        if self.vm.klass == 'AdminVM':
             return
 
         if state in ['Running', 'Paused']:
@@ -381,9 +380,9 @@ class DomainTray(Gtk.Application):
     def show_menu(self, _, event):
         menu = Gtk.Menu()
         menu.add(DomainMenuItem(None))
-        # sort dom0 first
+        # sort AdminVM first
         for vm in sorted(self.menu_items,
-                         key=lambda vm: ' ' if vm.name == 'dom0' else vm.name):
+                         key=lambda vm: ' ' if vm.klass == 'AdminVM' else vm.name):
             self.tray_menu.remove(self.menu_items[vm])
             menu.add(self.menu_items[vm])
             self.menu_items[vm].name.update_tooltip(storage_changed=True)
@@ -471,12 +470,13 @@ class DomainTray(Gtk.Application):
         domain_item = DomainMenuItem(vm)
         position = 0
         for i in self.tray_menu:  # pylint: disable=not-an-iterable
-            if not hasattr(i, 'vm'):   # insert here if last menu item
+            if not hasattr(i, 'vm'):   # reached end
                 break
-            if i.vm is not None and vm.name == 'dom0':  # dom0 goes before first vm
-                break
-            if i.vm is not None and i.vm.name != 'dom0' and i.vm.name > vm.name:
-                break
+            if i.vm is not None:  # i not header
+                if vm.klass == 'AdminVM':  # AdminVM goes before first vm
+                    break
+                if i.vm.klass != 'AdminVM' and i.vm.name > vm.name:
+                    break
             position += 1
         self.tray_menu.insert(domain_item, position)
         self.menu_items[vm] = domain_item
