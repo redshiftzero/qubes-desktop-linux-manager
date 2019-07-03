@@ -90,7 +90,7 @@ class DomainDecorator(PropertiesDecorator):
             if self.vm is None:
                 return
 
-            if self.vm.name == 'dom0':
+            if self.vm.klass == 'AdminVM':
                 return
 
             if not self.template_name:
