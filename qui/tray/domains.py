@@ -382,7 +382,8 @@ class DomainTray(Gtk.Application):
         menu.add(DomainMenuItem(None))
         # sort AdminVM first
         for vm in sorted(self.menu_items,
-                         key=lambda vm: ' ' if vm.klass == 'AdminVM' else vm.name):
+                         key=lambda vm:
+                         ' ' if vm.klass == 'AdminVM' else vm.name):
             self.tray_menu.remove(self.menu_items[vm])
             menu.add(self.menu_items[vm])
             self.menu_items[vm].name.update_tooltip(storage_changed=True)
