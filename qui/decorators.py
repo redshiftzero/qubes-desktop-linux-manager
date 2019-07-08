@@ -90,44 +90,49 @@ class DomainDecorator(PropertiesDecorator):
             if self.vm is None:
                 return
 
+            tooltip = "<b>{vmname}</b>".format(vmname=self.vm.name)
+
             if self.vm.klass == 'AdminVM':
-                return
 
-            if not self.template_name:
-                self.template_name = getattr(self.vm, 'template', None)
-                self.template_name = "None" if not self.template_name \
-                    else str(self.template_name)
+                tooltip += "\nAdministrative domain"
 
-            if not self.netvm_name or netvm_changed:
-                self.netvm_name = getattr(self.vm, 'netvm', None)
-                self.netvm_name = "None" if not self.netvm_name \
-                    else str(self.netvm_name)
+            else:
+                if not self.template_name:
+                    self.template_name = getattr(self.vm, 'template', None)
+                    self.template_name = "None" if not self.template_name \
+                        else str(self.template_name)
 
-            if not self.cur_storage or storage_changed:
-                self.cur_storage = self.vm.get_disk_utilization() / 1024 ** 3
+                if not self.netvm_name or netvm_changed:
+                    self.netvm_name = getattr(self.vm, 'netvm', None)
+                    self.netvm_name = "None" if not self.netvm_name \
+                        else str(self.netvm_name)
 
-            if not self.max_storage or storage_changed:
-                self.max_storage = self.vm.volumes['private'].size / 1024 ** 3
+                if not self.cur_storage or storage_changed:
+                    self.cur_storage = \
+                        self.vm.get_disk_utilization() / 1024 ** 3
 
-            tooltip = \
-                "<b>{vmname}</b>\n" \
-                "Template: <b>{template}</b>\n" \
-                "Networking: <b>{netvm}</b>\n" \
-                "Private storage: <b>{current_storage:.2f}GB/" \
-                "{max_storage:.2f}GB ({perc_storage:.1%})</b>".format(
-                    vmname=self.vm.name,
-                    template=self.template_name,
-                    netvm=self.netvm_name,
-                    current_storage=self.cur_storage,
-                    max_storage=self.max_storage,
-                    perc_storage=self.cur_storage / self.max_storage)
+                if not self.max_storage or storage_changed:
+                    self.max_storage = \
+                        self.vm.volumes['private'].size / 1024 ** 3
 
-            if self.outdated:
-                tooltip += "\n\nRestart qube to " \
-                                  "apply changes in template."
+                tooltip += \
+                    "\nTemplate: <b>{template}</b>" \
+                    "\nNetworking: <b>{netvm}</b>" \
+                    "\nPrivate storage: <b>{current_storage:.2f}GB/" \
+                    "{max_storage:.2f}GB ({perc_storage:.1%})</b>".format(
+                        vmname=self.vm.name,
+                        template=self.template_name,
+                        netvm=self.netvm_name,
+                        current_storage=self.cur_storage,
+                        max_storage=self.max_storage,
+                        perc_storage=self.cur_storage / self.max_storage)
 
-            if self.updates_available:
-                tooltip += "\n\nUpdates available."
+                if self.outdated:
+                    tooltip += "\n\nRestart qube to " \
+                                      "apply changes in template."
+
+                if self.updates_available:
+                    tooltip += "\n\nUpdates available."
 
             self.label.set_tooltip_markup(tooltip)
 
