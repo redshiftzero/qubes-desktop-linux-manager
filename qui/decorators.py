@@ -120,7 +120,6 @@ class DomainDecorator(PropertiesDecorator):
                     "\nNetworking: <b>{netvm}</b>" \
                     "\nPrivate storage: <b>{current_storage:.2f}GB/" \
                     "{max_storage:.2f}GB ({perc_storage:.1%})</b>".format(
-                        vmname=self.vm.name,
                         template=self.template_name,
                         netvm=self.netvm_name,
                         current_storage=self.cur_storage,
