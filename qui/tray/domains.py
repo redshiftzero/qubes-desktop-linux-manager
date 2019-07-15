@@ -21,6 +21,8 @@ from gi.repository import Gio, Gtk  # isort:skip
 import gbulb
 gbulb.install()
 
+icons = {}  # this dictionary holds Gtk icons to avoid creating them unnecessarily and thus causing lag
+
 
 
 class PauseItem(Gtk.ImageMenuItem):
@@ -30,11 +32,15 @@ class PauseItem(Gtk.ImageMenuItem):
         super().__init__()
         self.vm = vm
 
-        icon = Gtk.IconTheme.get_default().load_icon('media-playback-pause', 16,
-                                                     0)
-        image = Gtk.Image.new_from_pixbuf(icon)
+        if 'pause' in icons.keys():
+            icon = icons['pause']
+        else:
+            icon = Gtk.IconTheme.get_default().load_icon('media-playback-pause', 16, 0)
+            icons['pause'] = icon
 
-        self.set_image(image)
+        img = Gtk.Image.new_from_pixbuf(icon)
+
+        self.set_image(img)
         self.set_label('Pause')
 
         self.connect('activate', self.perform_pause)
@@ -50,11 +56,15 @@ class UnpauseItem(Gtk.ImageMenuItem):
         super().__init__()
         self.vm = vm
 
-        icon = Gtk.IconTheme.get_default().load_icon('media-playback-start', 16,
-                                                     0)
-        image = Gtk.Image.new_from_pixbuf(icon)
+        if 'unpause' in icons.keys():
+            icon = icons['unpause']
+        else:
+            icon = Gtk.IconTheme.get_default().load_icon('media-playback-start', 16, 0)
+            icons['unpause'] = icon
 
-        self.set_image(image)
+        img = Gtk.Image.new_from_pixbuf(icon)
+
+        self.set_image(img)
         self.set_label('Unpause')
 
         self.connect('activate', self.perform_unpause)
@@ -70,11 +80,15 @@ class ShutdownItem(Gtk.ImageMenuItem):
         super().__init__()
         self.vm = vm
 
-        icon = Gtk.IconTheme.get_default().load_icon('media-playback-stop', 16,
-                                                     0)
-        image = Gtk.Image.new_from_pixbuf(icon)
+        if 'shutdown' in icons.keys():
+            icon = icons['shutdown']
+        else:
+            icon = Gtk.IconTheme.get_default().load_icon('media-playback-stop', 16, 0)
+            icons['shutdown'] = icon
 
-        self.set_image(image)
+        img = Gtk.Image.new_from_pixbuf(icon)
+
+        self.set_image(img)
         self.set_label('Shutdown')
 
         self.connect('activate', self.perform_shutdown)
@@ -90,10 +104,15 @@ class KillItem(Gtk.ImageMenuItem):
         super().__init__()
         self.vm = vm
 
-        icon = Gtk.IconTheme.get_default().load_icon('media-record', 16, 0)
-        image = Gtk.Image.new_from_pixbuf(icon)
+        if 'kill' in icons.keys():
+            icon = icons['kill']
+        else:
+            icon = Gtk.IconTheme.get_default().load_icon('media-record', 16, 0)
+            icons['kill'] = icon
 
-        self.set_image(image)
+        img = Gtk.Image.new_from_pixbuf(icon)
+
+        self.set_image(img)
         self.set_label('Kill')
 
         self.connect('activate', self.perform_kill)
@@ -108,11 +127,16 @@ class PreferencesItem(Gtk.ImageMenuItem):
     def __init__(self, vm):
         super().__init__()
         self.vm = vm
-        icon = Gtk.IconTheme.get_default().load_icon('preferences-system', 16,
-                                                     0)
-        image = Gtk.Image.new_from_pixbuf(icon)
 
-        self.set_image(image)
+        if 'preferences' in icons.keys():
+            icon = icons['preferences']
+        else:
+            icon = Gtk.IconTheme.get_default().load_icon('preferences-system', 16, 0)
+            icons['preferences'] = icon
+
+        img = Gtk.Image.new_from_pixbuf(icon)
+
+        self.set_image(img)
         self.set_label('Settings')
 
         self.connect('activate', self.launch_preferences_dialog)
@@ -126,10 +150,9 @@ class LogItem(Gtk.ImageMenuItem):
         super().__init__()
         self.path = path
 
-        image = Gtk.Image.new_from_file(
-            "/usr/share/icons/HighContrast/16x16/apps/logviewer.png")
+        img = Gtk.Image.new_from_file("/usr/share/icons/HighContrast/16x16/apps/logviewer.png")
 
-        self.set_image(image)
+        self.set_image(img)
         self.set_label(name)
 
         self.connect('activate', self.launch_log_viewer)
@@ -143,11 +166,17 @@ class RunTerminalItem(Gtk.ImageMenuItem):
     def __init__(self, vm):
         super().__init__()
         self.vm = vm
-        icon = Gtk.IconTheme.get_default().load_icon('utilities-terminal', 16,
-                                                     0)
-        image = Gtk.Image.new_from_pixbuf(icon)
 
-        self.set_image(image)
+        if 'terminal' in icons.keys():
+            icon = icons['terminal']
+        else:
+            icon = Gtk.IconTheme.get_default().load_icon('utilities-terminal', 16, 0)
+
+            icons['terminal'] = icon
+
+        img = Gtk.Image.new_from_pixbuf(icon)
+
+        self.set_image(img)
         self.set_label('Run Terminal')
 
         self.connect('activate', self.run_terminal)
