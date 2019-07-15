@@ -76,7 +76,7 @@ class DomainDecorator(PropertiesDecorator):
             self.update_tooltip()
 
         def update_updateable(self):
-            if self.vm is None:
+            if self.vm is None or not getattr(self.vm, 'updateable', False):
                 return
             updates_state = self.vm.features.get('updates-available', False)
             self.updateable_icon.set_visible(updates_state)
