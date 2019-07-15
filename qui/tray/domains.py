@@ -24,6 +24,14 @@ gbulb.install()
 icons = {}  # this dictionary holds Gtk icons to avoid creating them unnecessarily and thus causing lag
 
 
+def show_error(title, text):
+    dialog = Gtk.MessageDialog(
+        None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)
+    dialog.set_title(title)
+    dialog.set_markup(text)
+    dialog.connect("response", lambda *x: dialog.destroy())
+    dialog.show()
+
 
 class PauseItem(Gtk.ImageMenuItem):
     ''' Shutdown menu Item. When activated pauses the domain. '''
@@ -46,7 +54,12 @@ class PauseItem(Gtk.ImageMenuItem):
         self.connect('activate', self.perform_pause)
 
     def perform_pause(self, *_args, **_kwargs):
-        self.vm.pause()
+        try:
+            self.vm.pause()
+        except exc.QubesException as ex:
+            show_error("Error pausing qube",
+                       "The following error occurred when on an attempt to pause qube {0}:\n"
+                       "{1}".format(self.vm.name, str(ex)))
 
 
 class UnpauseItem(Gtk.ImageMenuItem):
@@ -70,15 +83,21 @@ class UnpauseItem(Gtk.ImageMenuItem):
         self.connect('activate', self.perform_unpause)
 
     def perform_unpause(self, *_args, **_kwargs):
-        self.vm.unpause()
+        try:
+            self.vm.unpause()
+        except exc.QubesException as ex:
+            show_error("Error unpausing qube",
+                       "The following error occurred when on an attempt to unpause qube {0}:\n"
+                       "{1}".format(self.vm.name, str(ex)))
 
 
 class ShutdownItem(Gtk.ImageMenuItem):
     ''' Shutdown menu Item. When activated shutdowns the domain. '''
 
-    def __init__(self, vm):
+    def __init__(self, vm, app):
         super().__init__()
         self.vm = vm
+        self.app = app
 
         if 'shutdown' in icons.keys():
             icon = icons['shutdown']
@@ -94,7 +113,12 @@ class ShutdownItem(Gtk.ImageMenuItem):
         self.connect('activate', self.perform_shutdown)
 
     def perform_shutdown(self, *_args, **_kwargs):
-        self.vm.shutdown()
+        try:
+            self.vm.shutdown()
+        except exc.QubesException as ex:
+            show_error("Error shutting down qube",
+                       "The following error occurred when on an attempt to shutdown qube {0}:\n"
+                       "{1}".format(self.vm.name, str(ex)))
 
 
 class KillItem(Gtk.ImageMenuItem):
@@ -118,7 +142,12 @@ class KillItem(Gtk.ImageMenuItem):
         self.connect('activate', self.perform_kill)
 
     def perform_kill(self, *_args, **_kwargs):
-        self.vm.kill()
+        try:
+            self.vm.kill()
+        except exc.QubesException as ex:
+            show_error("Error shutting down qube",
+                       "The following error occurred when on an attempt to shutdown qube {0}:\n"
+                       "{1}".format(self.vm.name, str(ex)))
 
 
 class PreferencesItem(Gtk.ImageMenuItem):
@@ -184,16 +213,18 @@ class RunTerminalItem(Gtk.ImageMenuItem):
     def run_terminal(self, _item):
         self.vm.run_service('qubes.StartApp+qubes-run-terminal')
 
+
 class StartedMenu(Gtk.Menu):
     ''' The sub-menu for a started domain'''
 
-    def __init__(self, vm):
+    def __init__(self, vm, app):
         super().__init__()
         self.vm = vm
+        self.app = app
 
         self.add(PreferencesItem(self.vm))
         self.add(PauseItem(self.vm))
-        self.add(ShutdownItem(self.vm))
+        self.add(ShutdownItem(self.vm, self.app))
         self.add(RunTerminalItem(self.vm))
 
 
@@ -247,10 +278,12 @@ class QubesManagerItem(Gtk.ImageMenuItem):
 
         self.connect('activate', run_manager)
 
+
 class DomainMenuItem(Gtk.ImageMenuItem):
-    def __init__(self, vm):
+    def __init__(self, vm, app):
         super().__init__()
         self.vm = vm
+        self.app = app
         # set vm := None to make this output headers.
         # Header menu item reuses the domain menu item code
         #   so headers are aligned with the columns.
@@ -294,7 +327,7 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
     def _set_submenu(self, state):
         if state == 'Running':
-            submenu = StartedMenu(self.vm)
+            submenu = StartedMenu(self.vm, self.app)
         elif state == 'Paused':
             submenu = PausedMenu(self.vm)
         else:
@@ -497,7 +530,7 @@ class DomainTray(Gtk.Application):
         # check if it already exists
         if vm in self.menu_items:
             return
-        domain_item = DomainMenuItem(vm)
+        domain_item = DomainMenuItem(vm, self)
         position = 0
         for i in self.tray_menu:  # pylint: disable=not-an-iterable
             if not hasattr(i, 'vm'):   # reached end
