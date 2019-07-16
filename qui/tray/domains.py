@@ -326,9 +326,9 @@ class DomainMenuItem(Gtk.ImageMenuItem):
             self.set_reserve_indicator(True)  # align with submenu triangles
         else:
             self.update_state(self.vm.get_power_state())
-            self._set_image()
+            self.set_label_icon()
 
-    def _set_image(self):
+    def set_label_icon(self):
         self.set_image(self.decorator.icon())
 
     def _set_submenu(self, state):
@@ -423,6 +423,7 @@ class DomainTray(Gtk.Application):
         self.dispatcher.add_handler('domain-unpaused', self.update_domain_item)
         self.dispatcher.add_handler('domain-stopped', self.update_domain_item)
         self.dispatcher.add_handler('domain-shutdown', self.update_domain_item)
+        self.dispatcher.add_handler('domain-pre-shutdown', self.update_domain_item)
 
         self.dispatcher.add_handler('domain-add', self.add_domain_item)
         self.dispatcher.add_handler('domain-delete', self.remove_domain_item)
@@ -442,6 +443,7 @@ class DomainTray(Gtk.Application):
         self.dispatcher.add_handler('domain-feature-set:updates-available', self.feature_change)
         self.dispatcher.add_handler('domain-feature-delete:updates-available', self.feature_change)
         self.dispatcher.add_handler('property-set:netvm', self.property_change)
+        self.dispatcher.add_handler('property-set:label', self.property_change)
 
         self.stats_dispatcher.add_handler('vm-stats', self.update_stats)
 
@@ -540,10 +542,13 @@ class DomainTray(Gtk.Application):
             self.tray_menu.insert(domain_item, position)
         self.menu_items[vm] = domain_item
 
-    def property_change(self, vm, *_args, **_kwargs):
+    def property_change(self, vm, event, *_args, **_kwargs):
         if vm not in self.menu_items:
             return
-        self.menu_items[vm].name.update_tooltip(netvm_changed=True)
+        if event.endswith('netvm'):
+            self.menu_items[vm].name.update_tooltip(netvm_changed=True)
+        elif event.endswith('label'):
+            self.menu_items[vm].set_label_icon()
 
     def feature_change(self, vm, *_args, **_kwargs):
         if vm not in self.menu_items:
@@ -621,6 +626,7 @@ class DomainTray(Gtk.Application):
         self.dispatcher.remove_handler('domain-unpaused', self.update_domain_item)
         self.dispatcher.remove_handler('domain-stopped', self.update_domain_item)
         self.dispatcher.remove_handler('domain-shutdown', self.update_domain_item)
+        self.dispatcher.remove_handler('domain-pre-shutdown', self.update_domain_item)
 
         self.dispatcher.remove_handler('domain-add', self.add_domain_item)
         self.dispatcher.remove_handler('domain-delete', self.remove_domain_item)
@@ -640,6 +646,7 @@ class DomainTray(Gtk.Application):
         self.dispatcher.remove_handler('domain-feature-set:updates-available', self.feature_change)
         self.dispatcher.remove_handler('domain-feature-delete:updates-available', self.feature_change)
         self.dispatcher.remove_handler('property-set:netvm', self.property_change)
+        self.dispatcher.remove_handler('property-set:label', self.property_change)
 
         self.stats_dispatcher.remove_handler('vm-stats', self.update_stats)
 
