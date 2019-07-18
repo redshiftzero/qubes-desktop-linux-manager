@@ -10,6 +10,7 @@ import subprocess
 
 import qubesadmin
 import qubesadmin.events
+from qubesadmin import exc
 
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
@@ -104,6 +105,23 @@ class UpdatesTray(Gtk.Application):
                                     self.feature_set)
         self.dispatcher.add_handler('domain-feature-delete:updates-available',
                                     self.feature_unset)
+        self.dispatcher.add_handler('domain-add', self.domain_added)
+        self.dispatcher.add_handler('domain-delete', self.domain_removed)
+
+    def domain_added(self, _submitter, _event, vm, *_args, **_kwargs):
+        try:
+            vm_object = self.qapp.domains[vm]
+        except exc.QubesException:
+            # a disposableVM crashed on start
+            return
+        if vm_object.features.get('updates-available', False) and \
+                (getattr(vm_object, 'updateable', False) or
+                 vm_object.klass == 'AdminVM'):
+            self.vms_needing_update.add(vm_object.name)
+
+    def domain_removed(self, _submitter, _event, vm, *_args, **_kwargs):
+        if vm in self.vms_needing_update:
+            self.vms_needing_update.remove(vm)
 
     def feature_unset(self, vm, event, feature, **_kwargs):
         # pylint: disable=unused-argument
