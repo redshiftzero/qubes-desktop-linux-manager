@@ -25,7 +25,7 @@ class PoolUsageData:
     def __populate_pools(self):
         for pool in sorted(self.qubes_app.pools.values()):
             self.pools.append(pool)
-            if pool.size is None or 'included_in' in pool.config:
+            if not pool.size or 'included_in' in pool.config:
                 continue
             self.total_size += pool.size
             self.used_size += pool.usage
@@ -50,7 +50,7 @@ class PoolUsageData:
         percentage_use = Gtk.Label()
         numeric_use = Gtk.Label()
 
-        if pool.size is not None and 'included_in' not in pool.config:
+        if pool.size and 'included_in' not in pool.config:
             pool_name.set_markup('<b>{}</b>'.format(pool.name))
 
             percentage = pool.usage/pool.size
