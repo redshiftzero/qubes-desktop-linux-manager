@@ -597,11 +597,13 @@ class DomainTray(Gtk.Application):
 
         item.update_state(vm.get_power_state())
 
-        if event == 'domain-shutdown'\
-                and getattr(vm, 'klass', None) == 'TemplateVM':
-            for item in self.menu_items.values():
-                if getattr(item.vm, 'template', None) == vm:
-                    item.name.update_outdated(True)
+        if event == 'domain-shutdown':
+            if getattr(vm, 'klass', None) == 'TemplateVM':
+                for menu_item in self.menu_items.values():
+                    if getattr(menu_item.vm, 'template', None) == vm:
+                        menu_item.name.update_outdated(True)
+            # if the VM was shut down, it is no longer outdated
+            item.name.update_outdated(False)
 
         if event in ('domain-start', 'domain-pre-start'):
             item.show_all()
