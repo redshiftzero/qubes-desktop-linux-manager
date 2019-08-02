@@ -76,7 +76,7 @@ class DomainDecorator(PropertiesDecorator):
             self.update_tooltip()
 
         def update_updateable(self):
-            if self.vm is None:
+            if self.vm is None or not getattr(self.vm, 'updateable', False):
                 return
             updates_state = self.vm.features.get('updates-available', False)
             self.updateable_icon.set_visible(updates_state)
@@ -115,6 +115,11 @@ class DomainDecorator(PropertiesDecorator):
                     self.max_storage = \
                         self.vm.volumes['private'].size / 1024 ** 3
 
+                if self.max_storage == 0:
+                    perc_storage = 0
+                else:
+                    perc_storage = self.cur_storage / self.max_storage
+
                 tooltip += \
                     "\nTemplate: <b>{template}</b>" \
                     "\nNetworking: <b>{netvm}</b>" \
@@ -124,7 +129,7 @@ class DomainDecorator(PropertiesDecorator):
                         netvm=self.netvm_name,
                         current_storage=self.cur_storage,
                         max_storage=self.max_storage,
-                        perc_storage=self.cur_storage / self.max_storage)
+                        perc_storage=perc_storage)
 
                 if self.outdated:
                     tooltip += "\n\nRestart qube to " \
