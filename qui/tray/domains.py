@@ -414,7 +414,8 @@ class DomainTray(Gtk.Application):
         elif event == 'domain-start':
             notification.set_body('Domain {} has started.'.format(vm.name))
         elif event == 'domain-pre-shutdown':
-            notification.set_body('Domain {} is halting.'.format(vm.name))
+            notification.set_body('Domain {} is attempting to shutdown.'.format(
+                vm.name))
         elif event == 'domain-shutdown':
             notification.set_body('Domain {} has halted.'.format(vm.name))
         else:
