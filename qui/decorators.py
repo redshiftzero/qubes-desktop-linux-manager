@@ -158,7 +158,8 @@ class DomainDecorator(PropertiesDecorator):
             elif cpu > 0:
                 markup = '{:3d}%'.format(cpu)
             else:
-                color = self.cpu_label.get_style_context().get_color(Gtk.StateFlags.INSENSITIVE).to_color()
+                color = self.cpu_label.get_style_context() \
+                            .get_color(Gtk.StateFlags.INSENSITIVE).to_color()
                 markup = '<span color="{}">0%</span>'.format(color.to_string())
 
             self.cpu_label.set_markup(markup)
