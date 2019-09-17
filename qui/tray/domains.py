@@ -21,6 +21,16 @@ from gi.repository import Gio, Gtk, GObject  # isort:skip
 import gbulb
 gbulb.install()
 
+STATE_DICTIONARY = {
+    'domain-pre-start': 'Transient',
+    'domain-start': 'Running',
+    'domain-start-failed': 'Halted',
+    'domain-paused': 'Paused',
+    'domain-unpaused': 'Running',
+    'domain-shutdown': 'Halted',
+    'domain-pre-shutdown': 'Transient'
+}
+
 
 class IconCache:
     def __init__(self):
@@ -276,7 +286,7 @@ class QubesManagerItem(Gtk.ImageMenuItem):
 
 
 class DomainMenuItem(Gtk.ImageMenuItem):
-    def __init__(self, vm, app, icon_cache):
+    def __init__(self, vm, app, icon_cache, state=None):
         super().__init__()
         self.vm = vm
         self.app = app
@@ -317,7 +327,10 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         elif self.vm.klass == 'AdminVM':  # no submenu for AdminVM
             self.set_reserve_indicator(True)  # align with submenu triangles
         else:
-            self.update_state(self.vm.get_power_state())
+            if not state:
+                self.update_state(self.vm.get_power_state())
+            else:
+                self.update_state(state)
             self.set_label_icon()
 
     def set_label_icon(self):
@@ -350,13 +363,19 @@ class DomainMenuItem(Gtk.ImageMenuItem):
         self.spinner.hide()
 
     def update_state(self, state):
+        try:
+            vm_klass = self.vm.klass
+        except AttributeError:
+            vm_klass = None
 
-        if self.vm is None or self.vm.klass == 'AdminVM':
-            # headers and AdminVMs don't have a submenu
+        if not self.vm or vm_klass == 'AdminVM':
+            # it's a header or an AdminVM, no need to do anything
             return
 
-        # AdminVM does not have submenu items
-        if self.vm.klass == 'AdminVM':
+        if not vm_klass:
+            # it's a DispVM in a very fragile state; just make sure to add
+            # correct submenu
+            self._set_submenu(state)
             return
 
         # if VM is not running, hide it
@@ -422,7 +441,6 @@ class DomainTray(Gtk.Application):
                                     self.update_domain_item)
         self.dispatcher.add_handler('domain-paused', self.update_domain_item)
         self.dispatcher.add_handler('domain-unpaused', self.update_domain_item)
-        self.dispatcher.add_handler('domain-stopped', self.update_domain_item)
         self.dispatcher.add_handler('domain-shutdown', self.update_domain_item)
         self.dispatcher.add_handler('domain-pre-shutdown',
                                     self.update_domain_item)
@@ -441,7 +459,6 @@ class DomainTray(Gtk.Application):
         self.dispatcher.add_handler('domain-start', self.check_pause_notify)
         self.dispatcher.add_handler('domain-paused', self.check_pause_notify)
         self.dispatcher.add_handler('domain-unpaused', self.check_pause_notify)
-        self.dispatcher.add_handler('domain-stopped', self.check_pause_notify)
         self.dispatcher.add_handler('domain-shutdown', self.check_pause_notify)
 
         self.dispatcher.add_handler('domain-feature-set:updates-available',
@@ -536,7 +553,12 @@ class DomainTray(Gtk.Application):
         vm = self.qapp.domains[str(vm)]
         if vm in self.menu_items:
             return
-        domain_item = DomainMenuItem(vm, self, self.icon_cache)
+
+        state = STATE_DICTIONARY.get(event)
+        if not state:
+            state = vm.get_power_state()
+
+        domain_item = DomainMenuItem(vm, self, self.icon_cache, state=state)
         if not event:  # menu item creation at widget start; we can assume
             # menu items are created in alphabetical order
             self.tray_menu.add(domain_item)
@@ -575,7 +597,10 @@ class DomainTray(Gtk.Application):
     def refresh_tooltips(self):
         for item in self.menu_items.values():
             if item.vm and item.is_visible():
-                item.name.update_tooltip(storage_changed=True)
+                try:
+                    item.name.update_tooltip(storage_changed=True)
+                except Exception:  # pylint: disable=broad-except
+                    pass
 
     def remove_domain_item(self, _submitter, _event, vm, **_kwargs):
         if vm not in self.menu_items:
@@ -590,13 +615,24 @@ class DomainTray(Gtk.Application):
         try:
             item = self.menu_items[vm]
         except exc.QubesPropertyAccessError:
+            print("Unexpected property access error")  # requested by @marmarek
+            traceback.print_exc()
             self.remove_domain_item(vm, event, **kwargs)
             return
         except KeyError:
             self.add_domain_item(None, event, vm)
             item = self.menu_items[vm]
 
-        item.update_state(vm.get_power_state())
+        if event in STATE_DICTIONARY:
+            state = STATE_DICTIONARY[event]
+        else:
+            try:
+                state = vm.get_power_state()
+            except Exception: # pylint: disable=broad-except
+                # it's a fragile DispVM
+                state = "Transient"
+
+        item.update_state(state)
 
         if event == 'domain-shutdown':
             if getattr(vm, 'klass', None) == 'TemplateVM':
@@ -654,8 +690,6 @@ class DomainTray(Gtk.Application):
         self.dispatcher.remove_handler('domain-paused', self.update_domain_item)
         self.dispatcher.remove_handler('domain-unpaused',
                                        self.update_domain_item)
-        self.dispatcher.remove_handler('domain-stopped',
-                                       self.update_domain_item)
         self.dispatcher.remove_handler('domain-shutdown',
                                        self.update_domain_item)
         self.dispatcher.remove_handler('domain-pre-shutdown',
@@ -677,8 +711,6 @@ class DomainTray(Gtk.Application):
         self.dispatcher.remove_handler('domain-start', self.check_pause_notify)
         self.dispatcher.remove_handler('domain-paused', self.check_pause_notify)
         self.dispatcher.remove_handler('domain-unpaused',
-                                       self.check_pause_notify)
-        self.dispatcher.remove_handler('domain-stopped',
                                        self.check_pause_notify)
         self.dispatcher.remove_handler('domain-shutdown',
                                        self.check_pause_notify)
