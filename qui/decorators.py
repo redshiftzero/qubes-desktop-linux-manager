@@ -7,7 +7,7 @@ containing helpful representation methods.
 import gi  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gtk, Pango  # isort:skip
-
+from qubesadmin import exc
 
 
 class PropertiesDecorator():
@@ -108,12 +108,18 @@ class DomainDecorator(PropertiesDecorator):
                         else str(self.netvm_name)
 
                 if not self.cur_storage or storage_changed:
-                    self.cur_storage = \
-                        self.vm.get_disk_utilization() / 1024 ** 3
+                    try:
+                        self.cur_storage = \
+                            self.vm.get_disk_utilization() / 1024 ** 3
+                    except exc.QubesDaemonNoResponseError:
+                        self.cur_storage = 0
 
                 if not self.max_storage or storage_changed:
-                    self.max_storage = \
-                        self.vm.volumes['private'].size / 1024 ** 3
+                    try:
+                        self.max_storage = \
+                            self.vm.volumes['private'].size / 1024 ** 3
+                    except exc.QubesDaemonNoResponseError:
+                        self.max_storage = 0
 
                 if self.max_storage == 0:
                     perc_storage = 0
