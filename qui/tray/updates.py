@@ -77,17 +77,12 @@ class UpdatesTray(Gtk.Application):
 
         self.tray_menu.show_all()
 
-    def show_menu(self, _, event):
+    def show_menu(self, _, _event):
         self.tray_menu = Gtk.Menu()
 
         self.setup_menu()
 
-        self.tray_menu.popup(None,  # parent_menu_shell
-                             None,  # parent_menu_item
-                             None,  # func
-                             None,  # data
-                             event.button,  # button
-                             Gtk.get_current_event_time())  # activate_time
+        self.tray_menu.popup_at_pointer(None)  # use current event
 
     @staticmethod
     def launch_updater(*_args, **_kwargs):

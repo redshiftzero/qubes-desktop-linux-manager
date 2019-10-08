@@ -131,7 +131,7 @@ class DiskSpace(Gtk.Application):
 
         return True  # needed for Gtk to correctly loop the function
 
-    def make_menu(self, _, event):
+    def make_menu(self, _, _event):
         pool_data = PoolUsageData()
 
         menu = Gtk.Menu()
@@ -162,12 +162,7 @@ class DiskSpace(Gtk.Application):
         menu.set_reserve_toggle_size(False)
 
         menu.show_all()
-        menu.popup(None,  # parent_menu_shell
-                   None,  # parent_menu_item
-                   None,  # func
-                   None,  # data
-                   event.button,  # button
-                   Gtk.get_current_event_time())  # activate_time
+        menu.popup_at_pointer(None)  # use current event
 
     @staticmethod
     def make_top_box(pool_data):

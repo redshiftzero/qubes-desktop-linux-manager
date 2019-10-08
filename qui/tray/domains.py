@@ -470,13 +470,8 @@ class DomainTray(Gtk.Application):
 
         self.stats_dispatcher.add_handler('vm-stats', self.update_stats)
 
-    def show_menu(self, _, event):
-        self.tray_menu.popup(None,  # parent_menu_shell
-                             None,  # parent_menu_item
-                             None,  # func
-                             None,  # data
-                             event.button,  # button
-                             Gtk.get_current_event_time())  # activate_time
+    def show_menu(self, _, _event):
+        self.tray_menu.popup_at_pointer(None)  # None means current event
 
     def emit_notification(self, vm, event, **kwargs):
         notification = Gio.Notification.new("Qube Status: {}". format(vm.name))

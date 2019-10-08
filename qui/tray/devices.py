@@ -305,7 +305,7 @@ class DevicesTray(Gtk.Application):
             if device.backend_domain == name:
                 device.vm_icon = vm.label.icon
 
-    def show_menu(self, _, event):
+    def show_menu(self, _, _event):
         tray_menu = Gtk.Menu()
 
         # create menu items
@@ -326,12 +326,7 @@ class DevicesTray(Gtk.Application):
             tray_menu.add(item)
 
         tray_menu.show_all()
-        tray_menu.popup(None,  # parent_menu_shell
-                        None,  # parent_menu_item
-                        None,  # func
-                        None,  # data
-                        event.button,  # button
-                        Gtk.get_current_event_time())  # activate_time
+        tray_menu.popup_at_pointer(None)  # use current event
 
     def emit_notification(self, title, message, priority, error=False):
         notification = Gio.Notification.new(title)
