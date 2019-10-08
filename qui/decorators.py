@@ -240,7 +240,7 @@ def device_hbox(device) -> Gtk.Box:
                                device.description)
     if device.attachments:
         name_label.set_markup('<b>{} ({})</b>'.format(
-            name, ", ".join([vm for vm in device.attachments])))
+            name, ", ".join(list(device.attachments))))
     else:
         name_label.set_text(name)
     name_label.set_max_width_chars(64)
