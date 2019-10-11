@@ -28,9 +28,9 @@ STATE_DICTIONARY = {
     'domain-paused': 'Paused',
     'domain-unpaused': 'Running',
     'domain-shutdown': 'Halted',
-    'domain-pre-shutdown': 'Transient'
+    'domain-pre-shutdown': 'Transient',
+    'domain-shutdown-failed': 'Running'
 }
-
 
 class IconCache:
     def __init__(self):
@@ -444,6 +444,8 @@ class DomainTray(Gtk.Application):
         self.dispatcher.add_handler('domain-shutdown', self.update_domain_item)
         self.dispatcher.add_handler('domain-pre-shutdown',
                                     self.update_domain_item)
+        self.dispatcher.add_handler('domain-shutdown-failed',
+                                    self.update_domain_item)
 
         self.dispatcher.add_handler('domain-add', self.add_domain_item)
         self.dispatcher.add_handler('domain-delete', self.remove_domain_item)
@@ -455,6 +457,8 @@ class DomainTray(Gtk.Application):
         self.dispatcher.add_handler('domain-pre-shutdown',
                                     self.emit_notification)
         self.dispatcher.add_handler('domain-shutdown', self.emit_notification)
+        self.dispatcher.add_handler('domain-shutdown-failed',
+                                    self.emit_notification)
 
         self.dispatcher.add_handler('domain-start', self.check_pause_notify)
         self.dispatcher.add_handler('domain-paused', self.check_pause_notify)
@@ -492,6 +496,12 @@ class DomainTray(Gtk.Application):
                 vm.name))
         elif event == 'domain-shutdown':
             notification.set_body('Domain {} has halted.'.format(vm.name))
+        elif event == 'domain-shutdown-failed':
+            notification.set_body('Domain {} has failed to shutdown: {}'.format(
+                vm.name, kwargs['reason']))
+            notification.set_priority(Gio.NotificationPriority.HIGH)
+            notification.set_icon(
+                Gio.ThemedIcon.new('dialog-warning'))
         else:
             return
         self.send_notification(None, notification)
@@ -689,6 +699,8 @@ class DomainTray(Gtk.Application):
                                        self.update_domain_item)
         self.dispatcher.remove_handler('domain-pre-shutdown',
                                        self.update_domain_item)
+        self.dispatcher.remove_handler('domain-shutdown-failed',
+                                       self.update_domain_item)
 
         self.dispatcher.remove_handler('domain-add', self.add_domain_item)
         self.dispatcher.remove_handler('domain-delete', self.remove_domain_item)
@@ -701,6 +713,8 @@ class DomainTray(Gtk.Application):
         self.dispatcher.remove_handler('domain-pre-shutdown',
                                        self.emit_notification)
         self.dispatcher.remove_handler('domain-shutdown',
+                                       self.emit_notification)
+        self.dispatcher.remove_handler('domain-shutdown-failed',
                                        self.emit_notification)
 
         self.dispatcher.remove_handler('domain-start', self.check_pause_notify)
