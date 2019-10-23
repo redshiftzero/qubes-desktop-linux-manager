@@ -111,14 +111,14 @@ class DomainDecorator(PropertiesDecorator):
                     try:
                         self.cur_storage = \
                             self.vm.get_disk_utilization() / 1024 ** 3
-                    except exc.QubesDaemonNoResponseError:
+                    except (exc.QubesDaemonNoResponseError, KeyError):
                         self.cur_storage = 0
 
                 if not self.max_storage or storage_changed:
                     try:
                         self.max_storage = \
                             self.vm.volumes['private'].size / 1024 ** 3
-                    except exc.QubesDaemonNoResponseError:
+                    except (exc.QubesDaemonNoResponseError, KeyError):
                         self.max_storage = 0
 
                 if self.max_storage == 0:
