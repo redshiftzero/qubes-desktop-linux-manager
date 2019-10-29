@@ -113,10 +113,12 @@ class UpdatesTray(Gtk.Application):
                 (getattr(vm_object, 'updateable', False) or
                  vm_object.klass == 'AdminVM'):
             self.vms_needing_update.add(vm_object.name)
+            self.update_indicator_state()
 
     def domain_removed(self, _submitter, _event, vm, *_args, **_kwargs):
         if vm in self.vms_needing_update:
             self.vms_needing_update.remove(vm)
+            self.update_indicator_state()
 
     def feature_unset(self, vm, event, feature, **_kwargs):
         # pylint: disable=unused-argument
