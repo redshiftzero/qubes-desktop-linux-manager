@@ -12,6 +12,12 @@ gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gtk, Gdk, GObject, Gio  # isort:skip
 from qubesadmin import Qubes
 
+# using locale.gettext is necessary for Gtk.Builder translation support to work
+# in most cases gettext is better, but it cannot handle Gtk.Builder/glade files
+import locale
+from locale import gettext as _
+locale.bindtextdomain("desktop-linux-manager", "/usr/locales/")
+locale.textdomain('desktop-linux-manager')
 
 class QubesUpdater(Gtk.Application):
     # pylint: disable=too-many-instance-attributes
@@ -29,6 +35,7 @@ class QubesUpdater(Gtk.Application):
     def perform_setup(self, *_args, **_kwargs):
         # pylint: disable=attribute-defined-outside-init
         self.builder = Gtk.Builder()
+        self.builder.set_translation_domain("desktop-linux-manager")
         self.builder.add_from_file(pkg_resources.resource_filename(
             __name__, 'updater.glade'))
 
@@ -150,7 +157,7 @@ class QubesUpdater(Gtk.Application):
             self.progress_listview.show_all()
 
             self.next_button.set_sensitive(False)
-            self.next_button.set_label("Finish")
+            self.next_button.set_label(_("Finish"))
 
             # pylint: disable=attribute-defined-outside-init
             self.update_thread = threading.Thread(target=self.perform_update)
@@ -189,11 +196,11 @@ class QubesUpdater(Gtk.Application):
                 GObject.idle_add(row.set_status, 'failure')
                 GObject.idle_add(
                     self.append_text_view,
-                    "Cancelled update for {}\n".format(row.vm.name))
+                    _("Cancelled update for {}\n").format(row.vm.name))
                 continue
 
             GObject.idle_add(
-                self.append_text_view, "Updating {}\n".format(row.vm.name))
+                self.append_text_view, _("Updating {}\n").format(row.vm.name))
             GObject.idle_add(row.set_status, 'in-progress')
 
             try:
@@ -217,7 +224,7 @@ class QubesUpdater(Gtk.Application):
             except subprocess.CalledProcessError as ex:
                 GObject.idle_add(
                     self.append_text_view,
-                    "Error on updating {}: {}\n{}".format(
+                    _("Error on updating {}: {}\n{}").format(
                         row.vm.name, str(ex), ex.output.decode()))
                 GObject.idle_add(row.set_status, 'failure')
 
@@ -230,7 +237,7 @@ class QubesUpdater(Gtk.Application):
             self.exit_triggered = True
             dialog = Gtk.MessageDialog(
                 self.main_window, Gtk.DialogFlags.MODAL, Gtk.MessageType.OTHER,
-                Gtk.ButtonsType.NONE, "Cancelling remaining updates...")
+                Gtk.ButtonsType.NONE, _("Cancelling remaining updates..."))
             dialog.show()
             while self.update_thread.is_alive():
                 while Gtk.events_pending():
@@ -270,7 +277,8 @@ class VMListBoxRow(Gtk.ListBoxRow):
         self.label_text = vm.name
         self.updates_available = updates_available
         if self.updates_available:
-            self.label_text = self.label_text + " (updates available)"
+            self.label_text = _("{vm} (updates available)").format(
+                vm=self.label_text)
         self.label = Gtk.Label()
         self.icon = get_domain_icon(self.vm)
 
@@ -333,7 +341,7 @@ class ProgressListBoxRow(Gtk.ListBoxRow):
             widget = Gtk.Image.new_from_icon_name("gtk-cancel",
                                                   Gtk.IconSize.BUTTON)
         else:
-            raise ValueError("unknown status {}".format(status))
+            raise ValueError(_("unknown status {}").format(status))
 
         for child in self.progress_box.get_children():
             self.progress_box.remove(child)

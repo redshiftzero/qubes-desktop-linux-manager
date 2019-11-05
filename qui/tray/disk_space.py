@@ -6,6 +6,10 @@ from gi.repository import Gtk, GObject, Gio  # isort:skip
 from qubesadmin import Qubes
 from qubesadmin.utils import size_to_human
 
+import gettext
+t = gettext.translation("desktop-linux-manager", localedir="/usr/locales")
+_ = t.gettext
+
 # TODO: add configurable warning levels
 WARN_LEVEL = 0.9
 URGENT_WARN_LEVEL = 0.95
@@ -31,7 +35,7 @@ class PoolUsageData:
             self.used_size += pool.usage
             if pool.usage/pool.size >= URGENT_WARN_LEVEL:
                 self.warning_message.append(
-                    "\n{:.1%} space left in pool {}".format(
+                    _("\n{:.1%} space left in pool {}").format(
                         1-pool.usage/pool.size, pool.name))
 
     def get_pools_widgets(self):
@@ -108,15 +112,15 @@ class DiskSpace(Gtk.Application):
 
         if warning:
             self.icon.set_from_icon_name("dialog-warning")
-            text = "<b>Qubes Disk Space Monitor</b>\nWARNING! You are running" \
-                   " out of disk space." + ''.join(warning)
+            text = _("<b>Qubes Disk Space Monitor</b>\nWARNING! You are "
+                     "running out of disk space.") + ''.join(warning)
             self.icon.set_tooltip_markup(text)
 
             if not self.warned:
-                notification = Gio.Notification.new("Disk usage warning!")
+                notification = Gio.Notification.new(_("Disk usage warning!"))
                 notification.set_priority(Gio.NotificationPriority.HIGH)
                 notification.set_body(
-                    "You are running out of disk space." + ''.join(warning))
+                    _("You are running out of disk space.") + ''.join(warning))
                 notification.set_icon(
                     Gio.ThemedIcon.new('dialog-warning'))
 
@@ -126,12 +130,12 @@ class DiskSpace(Gtk.Application):
         else:
             self.icon.set_from_icon_name("drive-harddisk")
             self.icon.set_tooltip_markup(
-                '<b>Qubes Disk Space Monitor</b>\nView free disk space.')
+                _('<b>Qubes Disk Space Monitor</b>\nView free disk space.'))
             self.warned = False
 
         return True  # needed for Gtk to correctly loop the function
 
-    def make_menu(self, _, _event):
+    def make_menu(self, _unused, _event):
         pool_data = PoolUsageData()
 
         menu = Gtk.Menu()
@@ -139,7 +143,7 @@ class DiskSpace(Gtk.Application):
         menu.append(self.make_top_box(pool_data))
 
         title_label = Gtk.Label(xalign=0)
-        title_label.set_markup("<b>Volumes</b>")
+        title_label.set_markup(_("<b>Volumes</b>"))
         title_menu_item = Gtk.MenuItem()
         title_menu_item.add(title_label)
         title_menu_item.set_sensitive(False)
@@ -169,7 +173,7 @@ class DiskSpace(Gtk.Application):
         grid = Gtk.Grid()
 
         name_label = Gtk.Label(xalign=0)
-        name_label.set_markup("<b>Total disk usage</b>")
+        name_label.set_markup(_("<b>Total disk usage</b>"))
 
         percentage_value = Gtk.Label()
         percentage_value.set_markup(colored_percentage(pool_data.get_usage()))

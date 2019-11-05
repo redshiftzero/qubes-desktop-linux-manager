@@ -1,0 +1,459 @@
+# qubes-desktop-linux-manager
+# Copyright (C) 2019 Qubes OS
+# Marta Marczykowska-Górecka <marmarta@invisiblethingslab.com> 2019
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 4.0.22\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-11-08 15:38+0100\n"
+"PO-Revision-Date: 2019-10-29 15:34+0100\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+
+#: qui/clipboard.py:70
+#, python-brace-format
+msgid ""
+"Qubes Clipboard fetched from qube: <b>'{0}'</b>\n"
+"Copied <b>{1}</b> to the clipboard.\n"
+"<small>Press Ctrl-Shift-v to copy this clipboard into destination qube's "
+"clipboard.</small>"
+msgstr ""
+
+#: qui/clipboard.py:80
+msgid ""
+"Qubes Clipboard has been copied to the qube and wiped.<i/>\n"
+"<small>Trigger a paste operation (e.g. Ctrl-v) to insert it into an "
+"application.</small>"
+msgstr ""
+
+#: qui/clipboard.py:114
+msgid "? bytes"
+msgstr ""
+
+#: qui/clipboard.py:117
+msgid "1 byte"
+msgstr ""
+
+#: qui/clipboard.py:119
+msgid " bytes"
+msgstr ""
+
+#: qui/clipboard.py:140
+msgid ""
+"<b>Qubes Clipboard</b>\n"
+"Information about current state of Qubes Clipboard."
+msgstr ""
+
+#: qui/clipboard.py:178
+msgid "<i>Qubes clipboard is empty</i>"
+msgstr ""
+
+#: qui/clipboard.py:184
+#, python-brace-format
+msgid "<i>Qubes clipboard contents: {0} from <b>{1}</b></i>"
+msgstr ""
+
+#: qui/clipboard.py:195
+msgid "<b>Current clipboard</b>"
+msgstr ""
+
+#: qui/clipboard.py:210
+msgid "<i>Use <b>Ctrl+Shift+C</b> to copy, <b>Ctrl+Shift+V</b> to paste.</i>"
+msgstr ""
+
+#: qui/clipboard.py:220
+msgid "Copy dom0 clipboard"
+msgstr ""
+
+#: qui/clipboard.py:229
+msgid "dom0 clipboard is empty!"
+msgstr ""
+
+#: qui/clipboard.py:235
+msgid "Error while accessing Qubes clipboard!"
+msgstr ""
+
+#: qui/clipboard.py:240
+msgid "Error while locking Qubes clipboard!"
+msgstr ""
+
+#: qui/clipboard.py:251
+#, python-brace-format
+msgid ""
+"Error while writing to Qubes clipboard!\n"
+"{0}"
+msgstr ""
+
+#: qui/clipboard.py:258
+msgid "Qubes Clipboard"
+msgstr ""
+
+#: qui/decorators.py:58
+msgid "<b>Qube</b>"
+msgstr ""
+
+#: qui/decorators.py:67
+msgid "Updates available"
+msgstr ""
+
+#: qui/decorators.py:69
+msgid "Qube must be restarted to reflect changes in template"
+msgstr ""
+
+#: qui/decorators.py:101
+msgid ""
+"\n"
+"Administrative domain"
+msgstr ""
+
+#: qui/decorators.py:134
+#, python-brace-format
+msgid ""
+"\n"
+"Template: <b>{template}</b>\n"
+"Networking: <b>{netvm}</b>\n"
+"Private storage: <b>{current_storage:.2f}GB/{max_storage:.2f}GB "
+"({perc_storage:.1%})</b>"
+msgstr ""
+
+#: qui/decorators.py:145
+msgid ""
+"\n"
+"\n"
+"Restart qube to apply changes in template."
+msgstr ""
+
+#: qui/decorators.py:149
+msgid ""
+"\n"
+"\n"
+"Updates available."
+msgstr ""
+
+#: qui/decorators.py:167
+msgid "<b>CPU</b>"
+msgstr ""
+
+#: qui/decorators.py:185
+msgid "<b>RAM</b>"
+msgstr ""
+
+#: qui/updater.py:160
+msgid "Finish"
+msgstr ""
+
+#: qui/updater.py:199
+msgid "Cancelled update for {}\n"
+msgstr ""
+
+#: qui/updater.py:203
+msgid "Updating {}\n"
+msgstr ""
+
+#: qui/updater.py:227
+msgid ""
+"Error on updating {}: {}\n"
+"{}"
+msgstr ""
+
+#: qui/updater.py:240
+msgid "Cancelling remaining updates..."
+msgstr ""
+
+#: qui/updater.py:280
+#, python-brace-format
+msgid "{vm} (updates available)"
+msgstr ""
+
+#: qui/updater.py:344
+msgid "unknown status {}"
+msgstr ""
+
+#: qui/tray/devices.py:83
+msgid "Attaching device"
+msgstr ""
+
+#: qui/tray/devices.py:84
+msgid "Attaching {} to {}"
+msgstr ""
+
+#: qui/tray/devices.py:89 qui/tray/devices.py:112
+msgid "Error"
+msgstr ""
+
+#: qui/tray/devices.py:90
+#, python-brace-format
+msgid "Attaching device {0} to {1} failed. Error: {2} - {3}"
+msgstr ""
+
+#: qui/tray/devices.py:101
+msgid "Detaching device"
+msgstr ""
+
+#: qui/tray/devices.py:102
+msgid "Detaching {} from {}"
+msgstr ""
+
+#: qui/tray/devices.py:113
+#, python-brace-format
+msgid "Detaching device {0} from {1} failed. Error: {2}"
+msgstr ""
+
+#: qui/tray/devices.py:208
+msgid ""
+"<b>Qubes Devices</b>\n"
+"View and manage devices."
+msgstr ""
+
+#: qui/tray/devices.py:226
+msgid "Device available"
+msgstr ""
+
+#: qui/tray/devices.py:227
+msgid "Device {} is available"
+msgstr ""
+
+#: qui/tray/devices.py:235
+msgid "Device removed"
+msgstr ""
+
+#: qui/tray/devices.py:236
+msgid "Device {} is removed"
+msgstr ""
+
+#: qui/tray/devices.py:363 qui/tray/domains.py:773 qui/tray/updates.py:174
+msgid "Houston, we have a problem..."
+msgstr ""
+
+#: qui/tray/devices.py:365 qui/tray/domains.py:775
+msgid ""
+"<b>Whoops. A critical error in Domains Widget has occured.</b> This is most "
+"likely a bug in the widget. To restart the widget, run 'qui-domains' in dom0."
+msgstr ""
+
+#: qui/tray/disk_space.py:38
+msgid ""
+"\n"
+"{:.1%} space left in pool {}"
+msgstr ""
+
+#: qui/tray/disk_space.py:115
+msgid ""
+"<b>Qubes Disk Space Monitor</b>\n"
+"WARNING! You are running out of disk space."
+msgstr ""
+
+#: qui/tray/disk_space.py:120
+msgid "Disk usage warning!"
+msgstr ""
+
+#: qui/tray/disk_space.py:123
+msgid "You are running out of disk space."
+msgstr ""
+
+#: qui/tray/disk_space.py:133
+msgid ""
+"<b>Qubes Disk Space Monitor</b>\n"
+"View free disk space."
+msgstr ""
+
+#: qui/tray/disk_space.py:146
+msgid "<b>Volumes</b>"
+msgstr ""
+
+#: qui/tray/disk_space.py:176
+msgid "<b>Total disk usage</b>"
+msgstr ""
+
+#: qui/tray/domains.py:80
+msgid "Pause"
+msgstr ""
+
+#: qui/tray/domains.py:88
+msgid "Error pausing qube"
+msgstr ""
+
+#: qui/tray/domains.py:89
+#, python-brace-format
+msgid ""
+"The following error occurred when on an attempt to pause qube {0}:\n"
+"{1}"
+msgstr ""
+
+#: qui/tray/domains.py:104
+msgid "Unpause"
+msgstr ""
+
+#: qui/tray/domains.py:112
+msgid "Error unpausing qube"
+msgstr ""
+
+#: qui/tray/domains.py:113
+#, python-brace-format
+msgid ""
+"The following error occurred when on an attempt to unpause qube {0}:\n"
+"{1}"
+msgstr ""
+
+#: qui/tray/domains.py:129
+msgid "Shutdown"
+msgstr ""
+
+#: qui/tray/domains.py:137 qui/tray/domains.py:161
+msgid "Error shutting down qube"
+msgstr ""
+
+#: qui/tray/domains.py:138 qui/tray/domains.py:162
+#, python-brace-format
+msgid ""
+"The following error occurred when on an attempt to shutdown qube {0}:\n"
+"{1}"
+msgstr ""
+
+#: qui/tray/domains.py:153
+msgid "Kill"
+msgstr ""
+
+#: qui/tray/domains.py:176
+msgid "Settings"
+msgstr ""
+
+#: qui/tray/domains.py:210
+msgid "Run Terminal"
+msgstr ""
+
+#: qui/tray/domains.py:259
+msgid "Console Log"
+msgstr ""
+
+#: qui/tray/domains.py:261
+msgid "QEMU Console Log"
+msgstr ""
+
+#: qui/tray/domains.py:285
+msgid "Open Qube Manager"
+msgstr ""
+
+#: qui/tray/domains.py:421
+msgid ""
+"<b>Qubes Domains</b>\n"
+"View and manage running domains."
+msgstr ""
+
+#: qui/tray/domains.py:486
+msgid "Qube Status: {}"
+msgstr ""
+
+#: qui/tray/domains.py:490
+msgid "Domain {} has failed to start: {}"
+msgstr ""
+
+#: qui/tray/domains.py:496
+msgid "Domain {} is starting."
+msgstr ""
+
+#: qui/tray/domains.py:498
+msgid "Domain {} has started."
+msgstr ""
+
+#: qui/tray/domains.py:501
+msgid "Domain {} is attempting to shutdown."
+msgstr ""
+
+#: qui/tray/domains.py:503
+msgid "Domain {} has halted."
+msgstr ""
+
+#: qui/tray/domains.py:506
+msgid "Domain {} has failed to shutdown: {}"
+msgstr ""
+
+#: qui/tray/domains.py:517
+msgid "Your VMs have been paused!"
+msgstr ""
+
+#: qui/tray/domains.py:519
+msgid ""
+"All your VMs are currently paused. If this was an accident, simply click "
+"\"Unpause All\" to un-pause them. Otherwise, you can un-pause individual VMs "
+"via the Qubes Domains tray menu."
+msgstr ""
+
+#: qui/tray/domains.py:525
+msgid "Unpause All"
+msgstr ""
+
+#: qui/tray/domains.py:629
+msgid "Unexpected property access error"
+msgstr ""
+
+#: qui/tray/updates.py:43
+msgid ""
+"<b>Qubes Update</b>\n"
+"Updates are available."
+msgstr ""
+
+#: qui/tray/updates.py:57
+msgid "<b>Qube Updates Available</b>"
+msgstr ""
+
+#: qui/tray/updates.py:64
+msgid "<i>Updates available for {} qubes</i>"
+msgstr ""
+
+#: qui/tray/updates.py:72
+msgid "Launch updater"
+msgstr ""
+
+#: qui/tray/updates.py:138
+msgid "New updates are available for {}"
+msgstr ""
+
+#: qui/tray/updates.py:176
+msgid ""
+"<b>Whoops. A critical error in Updates Widget has occured.</b> This is most "
+"likely a bug in the widget. To restart the widget, run 'qui-updates' in dom0."
+msgstr ""
+
+#: qui/updater.glade:9
+msgid "Qubes Updater"
+msgstr ""
+
+#: qui/updater.glade:27
+msgid "Next"
+msgstr ""
+
+#: qui/updater.glade:59
+msgid "Select templates and qubes to update:"
+msgstr ""
+
+#: qui/updater.glade:91
+msgid "No updates have been found."
+msgstr ""
+
+#: qui/updater.glade:101
+msgid "Enable updates for qubes without known available updates"
+msgstr ""
+
+#: qui/updater.glade:116
+msgid "Qube list"
+msgstr ""
+
+#: qui/updater.glade:129
+msgid "Update progress:"
+msgstr ""
+
+#: qui/updater.glade:183
+msgid "Details"
+msgstr ""
+
+#: qui/updater.glade:238
+msgid "page0"
+msgstr ""
+
+#: qui/updater.glade:251
+msgid "Cancel"
+msgstr ""

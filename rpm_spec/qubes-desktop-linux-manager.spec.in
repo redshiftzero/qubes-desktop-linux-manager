@@ -79,7 +79,6 @@ cp icons/22x22/generic-usb.png $RPM_BUILD_ROOT/usr/share/icons/Adwaita/22x22/dev
 cp icons/outdated.png $RPM_BUILD_ROOT/usr/share/icons/Adwaita/22x22/status/
 mkdir -p $RPM_BUILD_ROOT/usr/share/applications
 cp qubes-update-gui.desktop $RPM_BUILD_ROOT/usr/share/applications/
-mkdir -p $RPM_BUILD_ROOT/usr/lib/qubes/
 cp qui/widget-wrapper $RPM_BUILD_ROOT/usr/bin/widget-wrapper
 mkdir -p $RPM_BUILD_ROOT/lib/systemd/user/
 cp linux-systemd/qubes-widget@.service $RPM_BUILD_ROOT/lib/systemd/user/
@@ -137,6 +136,8 @@ gtk-update-icon-cache %{_datadir}/icons/Adwaita &>/dev/null || :
 /usr/share/applications/qubes-update-gui.desktop
 /usr/bin/widget-wrapper
 /lib/systemd/user/qubes-widget@.service
+/usr/locales/en/LC_MESSAGES/desktop-linux-manager.mo
+/usr/locales/pl/LC_MESSAGES/desktop-linux-manager.mo
 
 %changelog
 @CHANGELOG@

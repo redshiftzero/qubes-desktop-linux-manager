@@ -19,6 +19,10 @@ from gi.repository import Gtk, Gio  # isort:skip
 import gbulb
 gbulb.install()
 
+import gettext
+t = gettext.translation("desktop-linux-manager", localedir="/usr/locales")
+_ = t.gettext
+
 
 class UpdatesTray(Gtk.Application):
     def __init__(self, app_name, qapp, dispatcher):
@@ -35,8 +39,8 @@ class UpdatesTray(Gtk.Application):
         self.widget_icon.set_from_icon_name('software-update-available')
         self.widget_icon.set_visible(False)
         self.widget_icon.connect('button-press-event', self.show_menu)
-        self.widget_icon.set_tooltip_markup(
-            '<b>Qubes Update</b>\nUpdates are available.')
+        self.widget_icon.set_tooltip_markup(_(
+            '<b>Qubes Update</b>\nUpdates are available.'))
 
         self.vms_needing_update = set()
 
@@ -50,14 +54,14 @@ class UpdatesTray(Gtk.Application):
 
     def setup_menu(self):
         title_label = Gtk.Label(xalign=0)
-        title_label.set_markup("<b>Qube Updates Available</b>")
+        title_label.set_markup(_("<b>Qube Updates Available</b>"))
         title_menu_item = Gtk.MenuItem()
         title_menu_item.add(title_label)
         title_menu_item.set_sensitive(False)
 
         subtitle_label = Gtk.Label(xalign=0)
         subtitle_label.set_markup(
-            "<i>Updates available for {} qubes</i>".format(
+            _("<i>Updates available for {} qubes</i>").format(
                 len(self.vms_needing_update)))
         subtitle_menu_item = Gtk.MenuItem()
         subtitle_menu_item.set_margin_left(10)
@@ -65,7 +69,7 @@ class UpdatesTray(Gtk.Application):
         subtitle_menu_item.set_sensitive(False)
 
         run_label = Gtk.Label(xalign=0)
-        run_label.set_text("Launch updater")
+        run_label.set_text(_("Launch updater"))
         run_menu_item = Gtk.MenuItem()
         run_menu_item.set_margin_left(10)
         run_menu_item.add(run_label)
@@ -77,7 +81,7 @@ class UpdatesTray(Gtk.Application):
 
         self.tray_menu.show_all()
 
-    def show_menu(self, _, _event):
+    def show_menu(self, _unused, _event):
         self.tray_menu = Gtk.Menu()
 
         self.setup_menu()
@@ -131,7 +135,7 @@ class UpdatesTray(Gtk.Application):
             self.vms_needing_update.add(vm)
 
             notification = Gio.Notification.new(
-                "New updates are available for {}".format(vm.name))
+                _("New updates are available for {}").format(vm.name))
             notification.set_priority(Gio.NotificationPriority.NORMAL)
             self.send_notification(None, notification)
         elif not value and vm in self.vms_needing_update:
@@ -155,7 +159,7 @@ def main():
 
     loop = asyncio.get_event_loop()
 
-    done, _ = loop.run_until_complete(asyncio.ensure_future(
+    done, _unused = loop.run_until_complete(asyncio.ensure_future(
         dispatcher.listen_for_events()))
 
     exit_code = 0
@@ -167,11 +171,11 @@ def main():
             exc_type, exc_value = sys.exc_info()[:2]
             dialog = Gtk.MessageDialog(
                 None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)
-            dialog.set_title("Houston, we have a problem...")
-            dialog.set_markup(
+            dialog.set_title(_("Houston, we have a problem..."))
+            dialog.set_markup(_(
                 "<b>Whoops. A critical error in Updates Widget has occured.</b>"
                 " This is most likely a bug in the widget. To restart the "
-                "widget, run 'qui-updates' in dom0.")
+                "widget, run 'qui-updates' in dom0."))
             dialog.format_secondary_markup(
                 "\n<b>{}</b>: {}\n{}".format(
                    exc_type.__name__, exc_value, traceback.format_exc(limit=10)
