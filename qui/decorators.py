@@ -9,6 +9,10 @@ gi.require_version('Gtk', '3.0')  # isort:skip
 from gi.repository import Gtk, Pango  # isort:skip
 from qubesadmin import exc
 
+import gettext
+t = gettext.translation("desktop-linux-manager", localedir="/usr/locales")
+_ = t.gettext
+
 
 class PropertiesDecorator():
     ''' Base class for all decorators '''
@@ -51,7 +55,7 @@ class DomainDecorator(PropertiesDecorator):
             if self.vm:
                 self.label.set_label(self.vm.name)
             else:
-                self.label.set_markup('<b>Qube</b>')
+                self.label.set_markup(_('<b>Qube</b>'))
             self.pack_start(self.label, False, False, 0)
 
             self.outdated_icon = create_icon('outdated')
@@ -60,9 +64,9 @@ class DomainDecorator(PropertiesDecorator):
             self.outdated_icon.set_no_show_all(True)
             self.updateable_icon.set_no_show_all(True)
 
-            self.updateable_icon.set_tooltip_text("Updates available")
+            self.updateable_icon.set_tooltip_text(_("Updates available"))
             self.outdated_icon.set_tooltip_text(
-                "Qube must be restarted to reflect changes in template")
+                _("Qube must be restarted to reflect changes in template"))
 
             self.update_outdated(False)
             self.update_updateable()
@@ -94,7 +98,7 @@ class DomainDecorator(PropertiesDecorator):
 
             if self.vm.klass == 'AdminVM':
 
-                tooltip += "\nAdministrative domain"
+                tooltip += _("\nAdministrative domain")
 
             else:
                 if not self.template_name:
@@ -127,10 +131,10 @@ class DomainDecorator(PropertiesDecorator):
                     perc_storage = self.cur_storage / self.max_storage
 
                 tooltip += \
-                    "\nTemplate: <b>{template}</b>" \
-                    "\nNetworking: <b>{netvm}</b>" \
-                    "\nPrivate storage: <b>{current_storage:.2f}GB/" \
-                    "{max_storage:.2f}GB ({perc_storage:.1%})</b>".format(
+                    _("\nTemplate: <b>{template}</b>"
+                      "\nNetworking: <b>{netvm}</b>"
+                      "\nPrivate storage: <b>{current_storage:.2f}GB/"
+                      "{max_storage:.2f}GB ({perc_storage:.1%})</b>").format(
                         template=self.template_name,
                         netvm=self.netvm_name,
                         current_storage=self.cur_storage,
@@ -138,11 +142,11 @@ class DomainDecorator(PropertiesDecorator):
                         perc_storage=perc_storage)
 
                 if self.outdated:
-                    tooltip += "\n\nRestart qube to " \
-                                      "apply changes in template."
+                    tooltip += _("\n\nRestart qube to "
+                                 "apply changes in template.")
 
                 if self.updates_available:
-                    tooltip += "\n\nUpdates available."
+                    tooltip += _("\n\nUpdates available.")
 
             self.label.set_tooltip_markup(tooltip)
 
@@ -160,7 +164,7 @@ class DomainDecorator(PropertiesDecorator):
 
         def update_state(self, cpu=0, header=False):
             if header:
-                markup = '<b>CPU</b>'
+                markup = _('<b>CPU</b>')
             elif cpu > 0:
                 markup = '{:3d}%'.format(cpu)
             else:
@@ -178,7 +182,7 @@ class DomainDecorator(PropertiesDecorator):
 
         def update_state(self, memory=0, header=False):
             if header:
-                markup = '<b>RAM</b>'
+                markup = _('<b>RAM</b>')
             else:
                 markup = '{} MB'.format(str(int(memory/1024)))
 

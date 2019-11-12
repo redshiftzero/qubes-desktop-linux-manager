@@ -21,6 +21,10 @@ from gi.repository import Gio, Gtk, GObject  # isort:skip
 import gbulb
 gbulb.install()
 
+import gettext
+t = gettext.translation("desktop-linux-manager", localedir="/usr/locales")
+_ = t.gettext
+
 STATE_DICTIONARY = {
     'domain-pre-start': 'Transient',
     'domain-start': 'Running',
@@ -73,7 +77,7 @@ class PauseItem(Gtk.ImageMenuItem):
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('pause'))
 
         self.set_image(img)
-        self.set_label('Pause')
+        self.set_label(_('Pause'))
 
         self.connect('activate', self.perform_pause)
 
@@ -81,10 +85,10 @@ class PauseItem(Gtk.ImageMenuItem):
         try:
             self.vm.pause()
         except exc.QubesException as ex:
-            show_error("Error pausing qube",
-                       "The following error occurred when on an "
-                       "attempt to pause qube {0}:\n"
-                       "{1}".format(self.vm.name, str(ex)))
+            show_error(_("Error pausing qube"),
+                       _("The following error occurred when on an "
+                       "attempt to pause qube {0}:\n{1}").format(
+                           self.vm.name, str(ex)))
 
 
 class UnpauseItem(Gtk.ImageMenuItem):
@@ -97,7 +101,7 @@ class UnpauseItem(Gtk.ImageMenuItem):
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('unpause'))
 
         self.set_image(img)
-        self.set_label('Unpause')
+        self.set_label(_('Unpause'))
 
         self.connect('activate', self.perform_unpause)
 
@@ -105,10 +109,10 @@ class UnpauseItem(Gtk.ImageMenuItem):
         try:
             self.vm.unpause()
         except exc.QubesException as ex:
-            show_error("Error unpausing qube",
-                       "The following error occurred when on an attempt "
-                       "to unpause qube {0}:\n"
-                       "{1}".format(self.vm.name, str(ex)))
+            show_error(_("Error unpausing qube"),
+                       _("The following error occurred when on an attempt "
+                       "to unpause qube {0}:\n{1}").format(
+                           self.vm.name, str(ex)))
 
 
 class ShutdownItem(Gtk.ImageMenuItem):
@@ -122,7 +126,7 @@ class ShutdownItem(Gtk.ImageMenuItem):
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('shutdown'))
 
         self.set_image(img)
-        self.set_label('Shutdown')
+        self.set_label(_('Shutdown'))
 
         self.connect('activate', self.perform_shutdown)
 
@@ -130,10 +134,10 @@ class ShutdownItem(Gtk.ImageMenuItem):
         try:
             self.vm.shutdown()
         except exc.QubesException as ex:
-            show_error("Error shutting down qube",
-                       "The following error occurred when on an attempt to "
-                       "shutdown qube {0}:\n"
-                       "{1}".format(self.vm.name, str(ex)))
+            show_error(_("Error shutting down qube"),
+                       _("The following error occurred when on an attempt to "
+                       "shutdown qube {0}:\n{1}").format(
+                           self.vm.name, str(ex)))
 
 
 class KillItem(Gtk.ImageMenuItem):
@@ -146,7 +150,7 @@ class KillItem(Gtk.ImageMenuItem):
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('kill'))
 
         self.set_image(img)
-        self.set_label('Kill')
+        self.set_label(_('Kill'))
 
         self.connect('activate', self.perform_kill)
 
@@ -154,10 +158,9 @@ class KillItem(Gtk.ImageMenuItem):
         try:
             self.vm.kill()
         except exc.QubesException as ex:
-            show_error("Error shutting down qube",
-                       "The following error occurred when on an attempt to "
-                       "shutdown qube {0}:\n"
-                       "{1}".format(self.vm.name, str(ex)))
+            show_error(_("Error shutting down qube"),
+                       _("The following error occurred when on an attempt to "
+                       "shutdown qube {0}:\n{1}").format(self.vm.name, str(ex)))
 
 
 class PreferencesItem(Gtk.ImageMenuItem):
@@ -170,7 +173,7 @@ class PreferencesItem(Gtk.ImageMenuItem):
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('preferences'))
 
         self.set_image(img)
-        self.set_label('Settings')
+        self.set_label(_('Settings'))
 
         self.connect('activate', self.launch_preferences_dialog)
 
@@ -204,7 +207,7 @@ class RunTerminalItem(Gtk.ImageMenuItem):
         img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon('terminal'))
 
         self.set_image(img)
-        self.set_label('Run Terminal')
+        self.set_label(_('Run Terminal'))
 
         self.connect('activate', self.run_terminal)
 
@@ -253,8 +256,9 @@ class DebugMenu(Gtk.Menu):
         self.add(PreferencesItem(self.vm, icon_cache))
 
         logs = [
-            ("Console Log", "/var/log/xen/console/guest-" + vm.name + ".log"),
-            ("QEMU Console Log",
+            (_("Console Log"),
+             "/var/log/xen/console/guest-" + vm.name + ".log"),
+            (_("QEMU Console Log"),
              "/var/log/xen/console/guest-" + vm.name + "-dm.log"),
             ]
 
@@ -278,7 +282,7 @@ class QubesManagerItem(Gtk.ImageMenuItem):
         self.set_image(Gtk.Image.new_from_icon_name('qubes-logo-icon',
                                                     Gtk.IconSize.MENU))
 
-        self.set_label('Open Qube Manager')
+        self.set_label(_('Open Qube Manager'))
 
         self.connect('activate', run_manager)
 
@@ -414,7 +418,7 @@ class DomainTray(Gtk.Application):
         self.widget_icon.set_from_icon_name('qubes-logo-icon')
         self.widget_icon.connect('button-press-event', self.show_menu)
         self.widget_icon.set_tooltip_markup(
-            '<b>Qubes Domains</b>\nView and manage running domains.')
+            _('<b>Qubes Domains</b>\nView and manage running domains.'))
 
         self.tray_menu = Gtk.Menu()
 
@@ -474,31 +478,33 @@ class DomainTray(Gtk.Application):
 
         self.stats_dispatcher.add_handler('vm-stats', self.update_stats)
 
-    def show_menu(self, _, _event):
+    def show_menu(self, _unused, _event):
         self.tray_menu.popup_at_pointer(None)  # None means current event
 
     def emit_notification(self, vm, event, **kwargs):
-        notification = Gio.Notification.new("Qube Status: {}". format(vm.name))
+        notification = Gio.Notification.new(_(
+            "Qube Status: {}"). format(vm.name))
         notification.set_priority(Gio.NotificationPriority.NORMAL)
 
         if event == 'domain-start-failed':
-            notification.set_body('Domain {} has failed to start: {}'.format(
+            notification.set_body(_('Domain {} has failed to start: {}').format(
                 vm.name, kwargs['reason']))
             notification.set_priority(Gio.NotificationPriority.HIGH)
             notification.set_icon(
                 Gio.ThemedIcon.new('dialog-warning'))
         elif event == 'domain-pre-start':
-            notification.set_body('Domain {} is starting.'.format(vm.name))
+            notification.set_body(_('Domain {} is starting.').format(vm.name))
         elif event == 'domain-start':
-            notification.set_body('Domain {} has started.'.format(vm.name))
+            notification.set_body(_('Domain {} has started.').format(vm.name))
         elif event == 'domain-pre-shutdown':
-            notification.set_body('Domain {} is attempting to shutdown.'.format(
-                vm.name))
+            notification.set_body(
+                _('Domain {} is attempting to shutdown.').format(vm.name))
         elif event == 'domain-shutdown':
-            notification.set_body('Domain {} has halted.'.format(vm.name))
+            notification.set_body(_('Domain {} has halted.').format(vm.name))
         elif event == 'domain-shutdown-failed':
-            notification.set_body('Domain {} has failed to shutdown: {}'.format(
-                vm.name, kwargs['reason']))
+            notification.set_body(
+                _('Domain {} has failed to shutdown: {}').format(
+                    vm.name, kwargs['reason']))
             notification.set_priority(Gio.NotificationPriority.HIGH)
             notification.set_icon(
                 Gio.ThemedIcon.new('dialog-warning'))
@@ -508,15 +514,15 @@ class DomainTray(Gtk.Application):
 
     def emit_paused_notification(self):
         if not self.pause_notification_out:
-            notification = Gio.Notification.new("Your VMs have been paused!")
-            notification.set_body(
+            notification = Gio.Notification.new(_("Your VMs have been paused!"))
+            notification.set_body(_(
                 "All your VMs are currently paused. If this was an accident, "
                 "simply click \"Unpause All\" to un-pause them. Otherwise, "
                 "you can un-pause individual VMs via the Qubes Domains "
-                "tray menu.")
+                "tray menu."))
             notification.set_icon(
                 Gio.ThemedIcon.new('dialog-warning'))
-            notification.add_button('Unpause All', 'app.do-unpause-all')
+            notification.add_button(_('Unpause All'), 'app.do-unpause-all')
             notification.set_priority(Gio.NotificationPriority.HIGH)
             self.send_notification('vms-paused', notification)
             self.pause_notification_out = True
@@ -620,7 +626,7 @@ class DomainTray(Gtk.Application):
         try:
             item = self.menu_items[vm]
         except exc.QubesPropertyAccessError:
-            print("Unexpected property access error")  # requested by @marmarek
+            print(_("Unexpected property access error"))  # req by @marmarek
             traceback.print_exc()
             self.remove_domain_item(vm, event, **kwargs)
             return
@@ -686,7 +692,7 @@ class DomainTray(Gtk.Application):
     def run(self):  # pylint: disable=arguments-differ
         self.initialize_menu()
 
-    def _disconnect_signals(self, _):
+    def _disconnect_signals(self, _event):
         self.dispatcher.remove_handler('domain-pre-start',
                                        self.update_domain_item)
         self.dispatcher.remove_handler('domain-start', self.update_domain_item)
@@ -752,7 +758,7 @@ def main():
         asyncio.ensure_future(stats_dispatcher.listen_for_events()),
     ]
 
-    done, _ = loop.run_until_complete(asyncio.wait(
+    done, _unused = loop.run_until_complete(asyncio.wait(
             tasks, return_when=asyncio.FIRST_EXCEPTION))
 
     exit_code = 0
@@ -764,11 +770,11 @@ def main():
             exc_type, exc_value = sys.exc_info()[:2]
             dialog = Gtk.MessageDialog(
                 None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)
-            dialog.set_title("Houston, we have a problem...")
-            dialog.set_markup(
+            dialog.set_title(_("Houston, we have a problem..."))
+            dialog.set_markup(_(
                 "<b>Whoops. A critical error in Domains Widget has occured.</b>"
                 " This is most likely a bug in the widget. To restart the "
-                "widget, run 'qui-domains' in dom0.")
+                "widget, run 'qui-domains' in dom0."))
             dialog.format_secondary_markup(
                 "\n<b>{}</b>: {}\n{}".format(
                    exc_type.__name__, exc_value, traceback.format_exc(limit=10)

@@ -38,6 +38,10 @@ from gi.repository import Gtk, Gio, Gdk  # isort:skip
 import gbulb
 import pyinotify
 
+import gettext
+t = gettext.translation("desktop-linux-manager", localedir="/usr/locales")
+_ = t.gettext
+
 gbulb.install()
 
 DATA = "/var/run/qubes/qubes-clipboard.bin"
@@ -63,22 +67,22 @@ class EventHandler(pyinotify.ProcessEvent):
 
         size = clipboard_formatted_size()
 
-        body = "Qubes Clipboard fetched from VM: <b>'{0}'</b>\n" \
-               "Copied <b>{1}</b> to the clipboard.\n" \
-               "<small>Press Ctrl-Shift-v to copy this clipboard into dest" \
-               " VM's clipboard.</small>".format(vmname, size)
+        body = _("Qubes Clipboard fetched from qube: <b>'{0}'</b>\n"
+                 "Copied <b>{1}</b> to the clipboard.\n"
+                 "<small>Press Ctrl-Shift-v to copy this clipboard into "
+                 "destination qube's clipboard.</small>").format(vmname, size)
 
         self.gtk_app.update_clipboard_contents(vmname, size, message=body)
 
     def _paste(self):
         ''' Sends Paste notification via Gio.Notification.
         '''
-        body = "Qubes Clipboard has been copied to the VM and wiped.<i/>\n" \
-                "<small>Trigger a paste operation (e.g. Ctrl-v) to insert " \
-                "it into an application.</small>"
+        body = _("Qubes Clipboard has been copied to the qube and wiped.<i/>\n"
+                 "<small>Trigger a paste operation (e.g. Ctrl-v) to insert "
+                 "it into an application.</small>")
         self.gtk_app.update_clipboard_contents(message=body)
 
-    def process_IN_CLOSE_WRITE(self, _):
+    def process_IN_CLOSE_WRITE(self, _unused):
         ''' Reacts to modifications of the FROM file '''
         with open(FROM, 'r') as vm_from_file:
             vmname = vm_from_file.readline().strip('\n')
@@ -87,11 +91,11 @@ class EventHandler(pyinotify.ProcessEvent):
         else:
             self._copy(vmname=vmname)
 
-    def process_IN_MOVE_SELF(self, _):
+    def process_IN_MOVE_SELF(self, _unused):
         ''' Stop loop if file is moved '''
         self.loop.stop()
 
-    def process_IN_DELETE(self, _):
+    def process_IN_DELETE(self, _unused):
         ''' Stop loop if file is deleted '''
         self.loop.stop()
 
@@ -107,12 +111,12 @@ def clipboard_formatted_size() -> str:
     try:
         file_size = os.path.getsize(DATA)
     except OSError:
-        return '? bytes'
+        return _('? bytes')
     else:
         if file_size == 1:
-            formatted_bytes = '1 byte'
+            formatted_bytes = _('1 byte')
         else:
-            formatted_bytes = str(file_size) + ' bytes'
+            formatted_bytes = str(file_size) + _(' bytes')
 
         if file_size > 0:
             magnitude = min(
@@ -132,8 +136,9 @@ class NotificationApp(Gtk.Application):
 
         self.icon = Gtk.StatusIcon()
         self.icon.set_from_icon_name('edit-copy')
-        self.icon.set_tooltip_markup('<b>Qubes Clipboard</b>\nInformation '
-                                     'about current state of Qubes Clipboard.')
+        self.icon.set_tooltip_markup(
+            _('<b>Qubes Clipboard</b>\nInformation about current'
+              ' state of Qubes Clipboard.'))
         self.icon.connect('button-press-event', self.show_menu)
 
         self.menu = Gtk.Menu()
@@ -158,7 +163,7 @@ class NotificationApp(Gtk.Application):
         mask = pyinotify.ALL_EVENTS
         self.wm.add_watch(FROM, mask)
 
-    def show_menu(self, _, event):
+    def show_menu(self, _unused, event):
         self.menu.show_all()
         self.menu.popup(None,  # parent_menu_shell
                         None,  # parent_menu_item
@@ -169,14 +174,15 @@ class NotificationApp(Gtk.Application):
 
     def update_clipboard_contents(self, vm=None, size=0, message=None):
         if not vm or not size:
-            self.clipboard_label.set_markup("<i>Qubes clipboard is empty</i>")
+            self.clipboard_label.set_markup(_(
+                "<i>Qubes clipboard is empty</i>"))
             self.icon.set_from_icon_name("edit-copy")
             # todo the icon should be empty and full depending on state
 
         else:
             self.clipboard_label.set_markup(
-                "<i>Qubes clipboard contents: {0} from "
-                "<b>{1}</b></i>".format(size, vm))
+                _("<i>Qubes clipboard contents: {0} from "
+                  "<b>{1}</b></i>").format(size, vm))
             self.icon.set_from_icon_name("edit-copy")
 
         if message:
@@ -186,7 +192,7 @@ class NotificationApp(Gtk.Application):
         self.menu = Gtk.Menu()
 
         title_label = Gtk.Label(xalign=0)
-        title_label.set_markup("<b>Current clipboard</b>")
+        title_label.set_markup(_("<b>Current clipboard</b>"))
         title_item = Gtk.MenuItem()
         title_item.set_sensitive(False)
         title_item.add(title_label)
@@ -201,8 +207,8 @@ class NotificationApp(Gtk.Application):
         self.menu.append(Gtk.SeparatorMenuItem())
 
         help_label = Gtk.Label(xalign=0)
-        help_label.set_markup("<i>Use <b>Ctrl+Shift+C</b> to copy, "
-                              "<b>Ctrl+Shift+V</b> to paste.</i>")
+        help_label.set_markup(_("<i>Use <b>Ctrl+Shift+C</b> to copy, "
+                                "<b>Ctrl+Shift+V</b> to paste.</i>"))
         help_item = Gtk.MenuItem()
         help_item.set_margin_left(10)
         help_item.set_sensitive(False)
@@ -211,7 +217,7 @@ class NotificationApp(Gtk.Application):
 
         self.menu.append(Gtk.SeparatorMenuItem())
 
-        dom0_item = Gtk.MenuItem("Copy dom0 clipboard")
+        dom0_item = Gtk.MenuItem(_("Copy dom0 clipboard"))
         dom0_item.connect('activate', self.copy_dom0_clipboard)
         self.menu.append(dom0_item)
 
@@ -220,18 +226,18 @@ class NotificationApp(Gtk.Application):
         text = clipboard.wait_for_text()
 
         if not text:
-            self.notify("dom0 clipboard is empty!")
+            self.notify(_("dom0 clipboard is empty!"))
             return
 
         try:
             fd = os.open(APPVIEWER_LOCK, os.O_RDWR | os.O_CREAT, 0o0666)
         except Exception:  # pylint: disable=broad-except
-            self.notify("Error while accessing Qubes clipboard!")
+            self.notify(_("Error while accessing Qubes clipboard!"))
         else:
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX)
             except Exception:  # pylint: disable=broad-except
-                self.notify("Error while locking Qubes clipboard!")
+                self.notify(_("Error while locking Qubes clipboard!"))
                 os.close(fd)
             else:
                 try:
@@ -242,14 +248,14 @@ class NotificationApp(Gtk.Application):
                     with open(XEVENT, "w") as timestamp:
                         timestamp.write(str(Gtk.get_current_event_time()))
                 except Exception as ex:  # pylint: disable=broad-except
-                    self.notify("Error while writing to "
-                                "Qubes clipboard!\n{0}".format(str(ex)))
+                    self.notify(_("Error while writing to "
+                                  "Qubes clipboard!\n{0}").format(str(ex)))
                 fcntl.flock(fd, fcntl.LOCK_UN)
                 os.close(fd)
 
     def notify(self, body):
         # pylint: disable=attribute-defined-outside-init
-        notification = Gio.Notification.new("Qubes Clipboard")
+        notification = Gio.Notification.new(_("Qubes Clipboard"))
         notification.set_body(body)
         notification.set_priority(Gio.NotificationPriority.NORMAL)
         self.send_notification(self.get_application_id(), notification)

@@ -18,6 +18,9 @@ import qui.decorators
 import gbulb
 gbulb.install()
 
+import gettext
+t = gettext.translation("desktop-linux-manager", localedir="/usr/locales")
+_ = t.gettext
 
 DEV_TYPES = ['block', 'usb', 'mic']
 
@@ -77,14 +80,15 @@ class DomainMenu(Gtk.Menu):
             vm_to_attach.devices[menu_item.device.devclass].attach(assignment)
 
             self.gtk_app.emit_notification(
-                "Attaching device",
-                "Attaching {} to {}".format(self.device.description,
-                                            menu_item.vm),
+                _("Attaching device"),
+                _("Attaching {} to {}").format(self.device.description,
+                                               menu_item.vm),
                 Gio.NotificationPriority.NORMAL)
         except Exception as ex:  # pylint: disable=broad-except
             self.gtk_app.emit_notification(
-                "Error",
-                "Attaching device {0} to {1} failed. Error: {2} - {3}".format(
+                _("Error"),
+                _("Attaching device {0} to {1} failed. "
+                  "Error: {2} - {3}").format(
                     self.device.description, menu_item.vm, type(ex).__name__,
                     ex),
                 Gio.NotificationPriority.HIGH,
@@ -94,8 +98,8 @@ class DomainMenu(Gtk.Menu):
     def detach_item(self):
         for vm in self.device.attachments:
             self.gtk_app.emit_notification(
-                "Detaching device",
-                "Detaching {} from {}".format(self.device.description, vm),
+                _("Detaching device"),
+                _("Detaching {} from {}").format(self.device.description, vm),
                 Gio.NotificationPriority.NORMAL)
             try:
                 assignment = qubesadmin.devices.DeviceAssignment(
@@ -105,9 +109,9 @@ class DomainMenu(Gtk.Menu):
                     assignment)
             except qubesadmin.exc.QubesException as ex:
                 self.gtk_app.emit_notification(
-                    "Error",
-                    "Detaching device {0} from {1} failed. Error: {2}".format(
-                        self.device.description, vm, ex),
+                    _("Error"),
+                    _("Detaching device {0} from {1} failed. "
+                      "Error: {2}").format(self.device.description, vm, ex),
                     Gio.NotificationPriority.HIGH,
                     error=True)
                 return False
@@ -201,7 +205,7 @@ class DevicesTray(Gtk.Application):
         self.widget_icon.set_from_icon_name('media-removable')
         self.widget_icon.connect('button-press-event', self.show_menu)
         self.widget_icon.set_tooltip_markup(
-            '<b>Qubes Devices</b>\nView and manage devices.')
+            _('<b>Qubes Devices</b>\nView and manage devices.'))
 
     def device_list_update(self, vm, _event, **_kwargs):
 
@@ -219,8 +223,8 @@ class DevicesTray(Gtk.Application):
             if str(dev) not in self.devices:
                 self.devices[str(dev)] = dev
                 self.emit_notification(
-                    "Device available",
-                    "Device {} is available".format(dev.description),
+                    _("Device available"),
+                    _("Device {} is available").format(dev.description),
                     Gio.NotificationPriority.NORMAL)
 
         dev_to_remove = [name for name, dev in self.devices.items()
@@ -228,8 +232,8 @@ class DevicesTray(Gtk.Application):
                          and name not in changed_devices]
         for dev_name in dev_to_remove:
             self.emit_notification(
-                "Device removed",
-                "Device {} is removed".format(
+                _("Device removed"),
+                _("Device {} is removed").format(
                     self.devices[dev_name].description),
                 Gio.NotificationPriority.NORMAL)
             del self.devices[dev_name]
@@ -305,7 +309,7 @@ class DevicesTray(Gtk.Application):
             if device.backend_domain == name:
                 device.vm_icon = vm.label.icon
 
-    def show_menu(self, _, _event):
+    def show_menu(self, _unused, _event):
         tray_menu = Gtk.Menu()
 
         # create menu items
@@ -345,7 +349,7 @@ def main():
 
     loop = asyncio.get_event_loop()
 
-    done, _ = loop.run_until_complete(asyncio.ensure_future(
+    done, _unused = loop.run_until_complete(asyncio.ensure_future(
         dispatcher.listen_for_events()))
 
     exit_code = 0
@@ -356,11 +360,11 @@ def main():
             exc_type, exc_value = sys.exc_info()[:2]
             dialog = Gtk.MessageDialog(
                 None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)
-            dialog.set_title("Houston, we have a problem...")
-            dialog.set_markup(
+            dialog.set_title(_("Houston, we have a problem..."))
+            dialog.set_markup(_(
                 "<b>Whoops. A critical error in Domains Widget has occured.</b>"
                 " This is most likely a bug in the widget. To restart the "
-                "widget, run 'qui-domains' in dom0.")
+                "widget, run 'qui-domains' in dom0."))
             dialog.format_secondary_markup(
                 "\n<b>{}</b>: {}\n{}".format(
                    exc_type.__name__, exc_value, traceback.format_exc(limit=10)
