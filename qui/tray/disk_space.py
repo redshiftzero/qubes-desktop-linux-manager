@@ -37,6 +37,14 @@ class PoolUsageData:
                 self.warning_message.append(
                     _("\n{:.1%} space left in pool {}").format(
                         1-pool.usage/pool.size, pool.name))
+            if pool.usage_details.get('metadata_size', None):
+                metadata_usage = pool.usage_details['metadata_usage'] / \
+                                 pool.usage_details['metadata_size']
+                if metadata_usage >= URGENT_WARN_LEVEL:
+                    self.warning_message.append(
+                        "\nMetadata space for pool {} is running out. "
+                        "Current usage: {.1%}".format(
+                            pool.name, metadata_usage))
 
     def get_pools_widgets(self):
         for p in self.pools:
@@ -50,30 +58,73 @@ class PoolUsageData:
 
     @staticmethod
     def __create_box(pool):
+        name_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        percentage_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        usage_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+
         pool_name = Gtk.Label(xalign=0)
-        percentage_use = Gtk.Label()
-        numeric_use = Gtk.Label()
 
         if pool.size and 'included_in' not in pool.config:
+            # pool with detailed usage data
+            has_metadata = 'metadata_size' in pool.usage_details and\
+                           pool.usage_details['metadata_size']
+
             pool_name.set_markup('<b>{}</b>'.format(pool.name))
 
+            data_name = Gtk.Label(xalign=0)
+            data_name.set_markup("data")
+            data_name.set_margin_left(40)
+
+            name_box.pack_start(pool_name, True, True, 0)
+            name_box.pack_start(data_name, True, True, 0)
+
+            if has_metadata:
+                metadata_name = Gtk.Label(xalign=0)
+                metadata_name.set_markup("metadata")
+                metadata_name.set_margin_left(40)
+
+                name_box.pack_start(metadata_name, True, True, 0)
+
+
             percentage = pool.usage/pool.size
+
+            percentage_use = Gtk.Label()
             percentage_use.set_markup(colored_percentage(percentage))
             percentage_use.set_justify(Gtk.Justification.RIGHT)
 
-            numeric_use.set_markup(
+            # empty label to guarantee proper alignment
+            percentage_box.pack_start(Gtk.Label(), True, True, 0)
+            percentage_box.pack_start(percentage_use, True, True, 0)
+
+            if has_metadata:
+                metadata_usage = pool.usage_details['metadata_usage'] / \
+                                 pool.usage_details['metadata_size']
+                metadata_label = Gtk.Label()
+                metadata_label.set_markup(colored_percentage(
+                    metadata_usage))
+                percentage_box.pack_start(metadata_label, True, True, 0)
+
+            numeric_label = Gtk.Label()
+            numeric_label.set_markup(
                 '<span color=\'grey\'><i>{}/{}</i></span>'.format(
                     size_to_human(pool.usage),
                     size_to_human(pool.size)))
-            numeric_use.set_justify(Gtk.Justification.RIGHT)
+            numeric_label.set_justify(Gtk.Justification.RIGHT)
+
+            # pack with empty labels to guarantee proper alignment
+            usage_box.pack_start(Gtk.Label(), True, True, 0)
+            usage_box.pack_start(numeric_label, True, True, 0)
+            usage_box.pack_start(Gtk.Label(), True, True, 0)
 
         else:
+            # pool that is included in other pools and/or has no usage data
             pool_name.set_markup(
                 '<span color=\'grey\'><i>{}</i></span>'.format(pool.name))
+            name_box.pack_start(pool_name, True, True, 0)
 
         pool_name.set_margin_left(20)
 
-        return pool_name, percentage_use, numeric_use
+        return name_box, percentage_box, usage_box
 
 
 def colored_percentage(value):
