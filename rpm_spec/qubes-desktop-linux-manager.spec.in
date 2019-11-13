@@ -43,6 +43,7 @@ AutoReq:	no
 BuildArch: noarch
 
 BuildRequires:  python3-devel
+BuildRequires:  gettext
 
 Requires:  python3-setuptools
 Requires:  python3-gbulb
