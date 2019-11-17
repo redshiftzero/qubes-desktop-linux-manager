@@ -19,7 +19,8 @@ import gbulb
 gbulb.install()
 
 import gettext
-t = gettext.translation("desktop-linux-manager", localedir="/usr/locales")
+t = gettext.translation("desktop-linux-manager", localedir="/usr/locales",
+                        fallback=True)
 _ = t.gettext
 
 DEV_TYPES = ['block', 'usb', 'mic']

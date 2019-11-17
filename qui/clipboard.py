@@ -39,7 +39,8 @@ import gbulb
 import pyinotify
 
 import gettext
-t = gettext.translation("desktop-linux-manager", localedir="/usr/locales")
+t = gettext.translation("desktop-linux-manager", localedir="/usr/locales",
+                        fallback=True)
 _ = t.gettext
 
 gbulb.install()

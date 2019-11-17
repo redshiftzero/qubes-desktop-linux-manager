@@ -10,7 +10,8 @@ from gi.repository import Gtk, Pango  # isort:skip
 from qubesadmin import exc
 
 import gettext
-t = gettext.translation("desktop-linux-manager", localedir="/usr/locales")
+t = gettext.translation("desktop-linux-manager", localedir="/usr/locales",
+                        fallback=True)
 _ = t.gettext
 
 
