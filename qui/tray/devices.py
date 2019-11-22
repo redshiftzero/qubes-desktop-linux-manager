@@ -1,7 +1,7 @@
 # pylint: disable=wrong-import-position,import-error
 import asyncio
 import sys
-
+import time
 import traceback
 
 import gi
@@ -69,6 +69,11 @@ class DomainMenu(Gtk.Menu):
 
     def attach_item(self, menu_item):
         detach_successful = self.detach_item()
+
+        # FIXME: this sleep is nasty, but seems to be enough
+        # to let devices be moved without "already attached"
+        # errors
+        time.sleep(1)
 
         if not detach_successful:
             return
@@ -171,7 +176,7 @@ class VM:
 
 
 class DevicesTray(Gtk.Application):
-    def __init__(self, app_name, qapp, dispatcher):
+    def __init__(self, app_name, qapp, dispatcher, update_queue):
         super(DevicesTray, self).__init__()
         self.name = app_name
 
@@ -180,6 +185,7 @@ class DevicesTray(Gtk.Application):
 
         self.dispatcher = dispatcher
         self.qapp = qapp
+        self.update_queue = update_queue
 
         self.set_application_id(self.name)
         self.register()  # register Gtk Application
@@ -209,35 +215,11 @@ class DevicesTray(Gtk.Application):
             _('<b>Qubes Devices</b>\nView and manage devices.'))
 
     def device_list_update(self, vm, _event, **_kwargs):
-
-        changed_devices = []
-
-        # create list of all current devices from the changed VM
+        print("device list updated")
         try:
-            for devclass in DEV_TYPES:
-                for device in vm.devices[devclass]:
-                    changed_devices.append(Device(device))
-        except qubesadmin.exc.QubesException:
-            changed_devices = []  # VM was removed
-
-        for dev in changed_devices:
-            if str(dev) not in self.devices:
-                self.devices[str(dev)] = dev
-                self.emit_notification(
-                    _("Device available"),
-                    _("Device {} is available").format(dev.description),
-                    Gio.NotificationPriority.NORMAL)
-
-        dev_to_remove = [name for name, dev in self.devices.items()
-                         if dev.backend_domain == vm
-                         and name not in changed_devices]
-        for dev_name in dev_to_remove:
-            self.emit_notification(
-                _("Device removed"),
-                _("Device {} is removed").format(
-                    self.devices[dev_name].description),
-                Gio.NotificationPriority.NORMAL)
-            del self.devices[dev_name]
+            self.update_queue.put_nowait("update_request")
+        except asyncio.QueueFull:
+            print("update requests are pending; not adding to the storm")
 
     def initialize_vm_data(self):
         for vm in self.qapp.domains:
@@ -245,6 +227,8 @@ class DevicesTray(Gtk.Application):
                 self.vms.add(VM(vm))
 
     def initialize_dev_data(self):
+        start = time.perf_counter()
+        self.devices = {}
 
         # list all devices
         for domain in self.qapp.domains:
@@ -261,6 +245,8 @@ class DevicesTray(Gtk.Application):
                         # occassionally ghost UnknownDevices appear when a
                         # device was removed but not detached from a VM
                         self.devices[dev].attachments.add(domain.name)
+
+        print("idd took {:.2f}s".format(time.perf_counter() - start))
 
     def device_attached(self, vm, _event, device, **_kwargs):
         if not vm.is_running() or device.devclass not in DEV_TYPES:
@@ -342,16 +328,30 @@ class DevicesTray(Gtk.Application):
         self.send_notification(None, notification)
 
 
+async def updater(app: DevicesTray, queue: asyncio.Queue):
+    while True:
+        await queue.get()
+        app.initialize_dev_data()
+        queue.task_done()
+
+
 def main():
     qapp = qubesadmin.Qubes()
     dispatcher = qubesadmin.events.EventsDispatcher(qapp)
+
+    update_queue = asyncio.Queue(maxsize=1)
+
     app = DevicesTray(
-        'org.qubes.qui.tray.Devices', qapp, dispatcher)
+        'org.qubes.qui.tray.Devices', qapp, dispatcher, update_queue)
 
     loop = asyncio.get_event_loop()
 
+    worker = loop.create_task(updater(app, update_queue))
+
     done, _unused = loop.run_until_complete(asyncio.ensure_future(
         dispatcher.listen_for_events()))
+
+    worker.cancel()
 
     exit_code = 0
     for d in done:  # pylint: disable=invalid-name
@@ -365,7 +365,7 @@ def main():
             dialog.set_markup(_(
                 "<b>Whoops. A critical error in Domains Widget has occured.</b>"
                 " This is most likely a bug in the widget. To restart the "
-                "widget, run 'qui-domains' in dom0."))
+                "widget, run 'qui-devices' in dom0."))
             dialog.format_secondary_markup(
                 "\n<b>{}</b>: {}\n{}".format(
                    exc_type.__name__, exc_value, traceback.format_exc(limit=10)
