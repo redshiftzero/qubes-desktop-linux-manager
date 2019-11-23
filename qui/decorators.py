@@ -228,17 +228,34 @@ class DomainDecorator(PropertiesDecorator):
         return label
 
 
-def device_hbox(device) -> Gtk.Box:
-    ''' Returns a :class:`Gtk.Box` containing the device name & icon.. '''
-    if device.devclass == 'block':
+def device_class_hbox(device_class) -> Gtk.Box:
+    ''' Returns a :class:`Gtk.Box` containing the device class name & icon.. '''
+    if device_class == 'block':
+        name = 'BLOCK'
         icon = 'drive-removable-media'
-    elif device.devclass == 'mic':
+    elif device_class == 'mic':
+        name = 'MICROPHONE'
         icon = 'audio-input-microphone'
-    elif device.devclass == 'usb':
+    elif device_class == 'usb':
+        name = 'USB'
         icon = 'generic-usb'
     else:
         icon = 'emblem-important'
     dev_icon = create_icon(icon)
+
+    name_label = Gtk.Label(xalign=0)
+    name_label.set_text('{}'.format(name))
+    name_label.set_max_width_chars(64)
+    name_label.set_ellipsize(Pango.EllipsizeMode.END)
+
+    hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+    hbox.pack_start(name_label, True, True, 0)
+    hbox.pack_start(dev_icon, False, True, 0)
+    return hbox
+
+
+def device_hbox(device, with_icon=True) -> Gtk.Box:
+    ''' Returns a :class:`Gtk.Box` containing the device name & icon.. '''
 
     name_label = Gtk.Label(xalign=0)
     name = "{}:{} - {}".format(device.backend_domain, device.ident,
@@ -253,7 +270,19 @@ def device_hbox(device) -> Gtk.Box:
 
     hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
     hbox.pack_start(name_label, True, True, 0)
-    hbox.pack_start(dev_icon, False, True, 0)
+
+    if with_icon:
+        if device.devclass == 'block':
+            icon = 'drive-removable-media'
+        elif device.devclass == 'mic':
+            icon = 'audio-input-microphone'
+        elif device.devclass == 'usb':
+            icon = 'generic-usb'
+        else:
+            icon = 'emblem-important'
+        dev_icon = create_icon(icon)
+        hbox.pack_start(dev_icon, False, True, 0)
+
     return hbox
 
 

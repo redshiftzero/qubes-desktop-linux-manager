@@ -5,9 +5,10 @@ import time
 import traceback
 
 import gi
+gi.require_version('Gdk', '3.0')  # isort:skip
 gi.require_version('Gtk', '3.0')  # isort:skip
 gi.require_version('AppIndicator3', '0.1')  # isort:skip
-from gi.repository import Gtk, Gio  # isort:skip
+from gi.repository import Gdk, Gtk, Gio  # isort:skip
 
 import qubesadmin
 import qubesadmin.events
@@ -23,10 +24,10 @@ t = gettext.translation("desktop-linux-manager", localedir="/usr/locales",
                         fallback=True)
 _ = t.gettext
 
-DEV_TYPES = ['block', 'usb', 'mic']
+DEV_TYPES = ['block', 'mic', 'usb']
 
 
-class DomainMenuItem(Gtk.ImageMenuItem):
+class DomainMenuItem(Gtk.MenuItem):
     """ A submenu item for the device menu. Displays attachment status.
      Allows attaching/detaching the device."""
 
@@ -37,8 +38,6 @@ class DomainMenuItem(Gtk.ImageMenuItem):
 
         self.device = device
 
-        icon = self.vm.icon
-        self.set_image(qui.decorators.create_icon(icon))
         self._hbox = qui.decorators.device_domain_hbox(self.vm, self.attached)
         self.add(self._hbox)
 
@@ -124,19 +123,27 @@ class DomainMenu(Gtk.Menu):
         return True
 
 
-class DeviceItem(Gtk.ImageMenuItem):
+class DeviceClassItem(Gtk.MenuItem):
+    """ MenuItem separating device classes. """
+
+    def __init__(self, device_class, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.device_class = device_class
+        self.hbox = qui.decorators.device_class_hbox(device_class)  # type: Gtk.Box
+        self.add(self.hbox)
+        self.get_style_context().add_class("deviceClassMenuItem")
+
+
+class DeviceItem(Gtk.MenuItem):
     """ MenuItem showing the device data and a :class:`DomainMenu`. """
 
     def __init__(self, device, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.device = device
-
-        self.hbox = qui.decorators.device_hbox(self.device)  # type: Gtk.Box
-
-        self.set_image(qui.decorators.create_icon(self.device.vm_icon))
-
+        self.hbox = qui.decorators.device_hbox(self.device, with_icon=False)  # type: Gtk.Box
         self.add(self.hbox)
+        self.get_style_context().add_class("deviceMenuItem")
+
 
 
 class Device:
@@ -176,6 +183,8 @@ class VM:
 
 
 class DevicesTray(Gtk.Application):
+    tray_menu = None
+
     def __init__(self, app_name, qapp, dispatcher, update_queue):
         super(DevicesTray, self).__init__()
         self.name = app_name
@@ -188,6 +197,7 @@ class DevicesTray(Gtk.Application):
         self.update_queue = update_queue
 
         self.set_application_id(self.name)
+        self.style()
         self.register()  # register Gtk Application
 
         self.initialize_vm_data()
@@ -214,10 +224,26 @@ class DevicesTray(Gtk.Application):
         self.widget_icon.set_tooltip_markup(
             _('<b>Qubes Devices</b>\nView and manage devices.'))
 
+    def style(self):
+        css = "".join([
+            """.deviceClassMenuItem {border-bottom: 2px solid #eee; padding-top: 1em;}""",
+            """.deviceClassMenuItem label {color: #aaa; font-size: 0.9em; letter-spacing: 0.1em;;}""",
+            """.deviceMenu .deviceClassMenuItem:first-child {padding-top: 0.5em;}""",
+        ]).encode("utf-8")
+        style_provider = Gtk.CssProvider()
+        style_provider.load_from_data(css)
+
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            style_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
     def device_list_update(self, vm, _event, **_kwargs):
         print("device list updated")
         try:
             self.update_queue.put_nowait("update_request")
+            print("added update request")
         except asyncio.QueueFull:
             print("update requests are pending; not adding to the storm")
 
@@ -227,24 +253,47 @@ class DevicesTray(Gtk.Application):
                 self.vms.add(VM(vm))
 
     def initialize_dev_data(self):
+        print("idd started")
         start = time.perf_counter()
-        self.devices = {}
+        updated_devices = {}
 
         # list all devices
         for domain in self.qapp.domains:
             for devclass in DEV_TYPES:
                 for device in domain.devices[devclass]:
-                    self.devices[str(device)] = Device(device)
+                    updated_devices[str(device)] = Device(device)
 
         # list existing device attachments
         for domain in self.qapp.domains:
             for devclass in DEV_TYPES:
                 for device in domain.devices[devclass].attached():
                     dev = str(device)
-                    if dev in self.devices:
+                    if dev in updated_devices:
                         # occassionally ghost UnknownDevices appear when a
                         # device was removed but not detached from a VM
-                        self.devices[dev].attachments.add(domain.name)
+                        updated_devices[dev].attachments.add(domain.name)
+
+        previous = set(self.devices.keys())
+        current = set(updated_devices.keys())
+        removals = previous - current
+        for removal in removals:
+            self.emit_notification(
+                _("Device removed"),
+                _("Device {} was removed").format(
+                    self.devices[removal].description
+                ),
+                Gio.NotificationPriority.NORMAL)
+
+        additions = current - previous
+        for addition in additions:
+            self.emit_notification(
+                _("Device available"),
+                _("Device {} is available").format(
+                    updated_devices[addition].description),
+                Gio.NotificationPriority.NORMAL)
+
+        self.devices = updated_devices
+        self.populate_menu()
 
         print("idd took {:.2f}s".format(time.perf_counter() - start))
 
@@ -296,28 +345,37 @@ class DevicesTray(Gtk.Application):
             if device.backend_domain == name:
                 device.vm_icon = vm.label.icon
 
-    def show_menu(self, _unused, _event):
-        tray_menu = Gtk.Menu()
+    def populate_menu(self):
+        if self.tray_menu is None:
+            self.tray_menu = Gtk.Menu()
+            self.tray_menu.get_style_context().add_class("deviceMenu")
+
+        for c in self.tray_menu.get_children():
+            self.tray_menu.remove(c)
 
         # create menu items
-        menu_items = []
+        menu_items = {dc: [] for dc in DEV_TYPES}
         sorted_vms = sorted(self.vms)
         for dev in self.devices.values():
             domain_menu = DomainMenu(dev, sorted_vms, self.qapp, self)
             device_menu = DeviceItem(dev)
             device_menu.set_submenu(domain_menu)
-            menu_items.append(device_menu)
+            menu_items[dev.devclass].append(device_menu)
 
-        menu_items.sort(key=(lambda x: x.device.devclass + str(x.device)))
+        for device_class, device_menu_items in sorted(menu_items.items()):
+            device_class_item = DeviceClassItem(device_class)
+            self.tray_menu.add(device_class_item)
+            device_menu_items.sort(
+                key=(lambda x: x.device.devclass + str(x.device))
+            )
+            for item in device_menu_items:
+                self.tray_menu.add(item)
 
-        for i, item in enumerate(menu_items):
-            if i > 0 and item.device.devclass != \
-                    menu_items[i-1].device.devclass:
-                tray_menu.add(Gtk.SeparatorMenuItem())
-            tray_menu.add(item)
+        self.tray_menu.show_all()
 
-        tray_menu.show_all()
-        tray_menu.popup_at_pointer(None)  # use current event
+    def show_menu(self, _unused, _event):
+        self.populate_menu()
+        self.tray_menu.popup_at_pointer(None)  # use current event
 
     def emit_notification(self, title, message, priority, error=False):
         notification = Gio.Notification.new(title)
@@ -330,16 +388,29 @@ class DevicesTray(Gtk.Application):
 
 async def updater(app: DevicesTray, queue: asyncio.Queue):
     while True:
+        print("waiting for update request")
         await queue.get()
+        print("update request received")
+        count = 1
+        try:
+            while queue.get_nowait():
+                count += 1
+                print("popped extra update request {}".format(count))
+        except asyncio.QueueEmpty:
+            print("queue emptied")
+        print("update requests received: {}".format(count))
         app.initialize_dev_data()
-        queue.task_done()
+        while count > 0:
+            queue.task_done()
+            count -= 1
+        print("update cycle done")
 
 
 def main():
     qapp = qubesadmin.Qubes()
     dispatcher = qubesadmin.events.EventsDispatcher(qapp)
 
-    update_queue = asyncio.Queue(maxsize=1)
+    update_queue = asyncio.Queue()
 
     app = DevicesTray(
         'org.qubes.qui.tray.Devices', qapp, dispatcher, update_queue)
